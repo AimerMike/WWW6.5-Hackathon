@@ -1,5 +1,5 @@
 import { createPublicClient, http } from 'viem';
-import { sepolia } from 'viem/chains';
+import { avalancheFuji } from 'viem/chains';
 import { requireEnv } from './env';
 
 let _publicClient: ReturnType<typeof createPublicClient> | null = null;
@@ -10,7 +10,7 @@ export function getPublicClient() {
 
   const { RPC_URL } = requireEnv(['RPC_URL'] as const);
   _publicClient = createPublicClient({
-    chain: sepolia,
+    chain: avalancheFuji,
     transport: http(RPC_URL),
   });
 

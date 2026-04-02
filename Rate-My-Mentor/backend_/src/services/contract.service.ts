@@ -65,7 +65,7 @@ export class ContractService {
       const contractAddress = getContractAddress();//易为新添
       
       const hasSBT = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'hasValidSBT',
         args: [walletAddress],
@@ -84,7 +84,7 @@ export class ContractService {
       const contractAddress = getContractAddress();//易为新添
       
       const sbtInfo = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'getUserSBT',
         args: [walletAddress],
@@ -110,7 +110,7 @@ export class ContractService {
       const contractAddress = getContractAddress();//易为新添
       
       const reviews = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'getCompanyReviews',
         args: [mentorCompany],
@@ -130,7 +130,7 @@ export class ContractService {
       const contractAddress = getContractAddress();//易为新添
       
       const count = await publicClient.readContract({
-        address: CONTRACT_ADDRESS,
+        address: contractAddress,
         abi: CONTRACT_ABI,
         functionName: 'getCompanyReviewCount',
         args: [mentorCompany],
