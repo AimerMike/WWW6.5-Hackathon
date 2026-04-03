@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Zap, ArrowLeft, MessageSquare, Calendar, Trash2, Palette, Link as LinkIcon, Share2, Wallet, Download, Grid, Globe, Lock, FileJson, FileSpreadsheet, Compass, User } from 'lucide-react';
+import { Plus, X, Zap, ArrowLeft, MessageSquare, Calendar, Trash2, Palette, Link as LinkIcon, Share2, Wallet, Download, Grid, Globe, Lock, FileJson, FileSpreadsheet, Compass, User, Search } from 'lucide-react';
 import { ethers } from 'ethers';
 import { useAccount } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config/contract';
@@ -26,6 +26,10 @@ const HabitDashboard = ({ onNavigateToExplore }) => {
     const saved = localStorage.getItem('IsleLightHabits_v2');
     return saved ? JSON.parse(saved) : [];
   });
+  
+  // 搜索状态
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredHabits, setFilteredHabits] = useState(habits);
 
   // 使用 wagmi 的 useAccount hook 获取钱包地址
   const { address: account, isConnected } = useAccount();
@@ -50,6 +54,23 @@ const HabitDashboard = ({ onNavigateToExplore }) => {
     localStorage.setItem('IsleLightHabits_v2', JSON.stringify(habits));
     document.title = "IsleLight - 你的习惯岛屿";
   }, [habits]);
+
+  // 搜索过滤
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredHabits(habits);
+      return;
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = habits.filter(habit => 
+      habit.name.toLowerCase().includes(query) ||
+      (habit.records && habit.records.some(r => 
+        r.thought && r.thought.toLowerCase().includes(query)
+      ))
+    );
+    setFilteredHabits(filtered);
+  }, [searchQuery, habits]);
 
   // --- 检查用户身份 ---
   useEffect(() => {
@@ -528,8 +549,34 @@ const HabitDashboard = ({ onNavigateToExplore }) => {
           </div>
         </header>
 
+        {/* 搜索栏 */}
+        {habits.length > 0 && (
+          <div className="search-section">
+            <div className="search-container-dashboard">
+              <Search size={18} className="search-icon-dashboard" />
+              <input
+                type="text"
+                placeholder="搜索你的岛屿或航海日志..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="search-input-dashboard"
+              />
+              {searchQuery && (
+                <button className="search-clear-dashboard" onClick={() => setSearchQuery('')}>
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <div className="search-result-count">
+                找到 <span className="highlight">{filteredHabits.length}</span> 座岛屿
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="habits-grid">
-          {habits.map(habit => (
+          {filteredHabits.map(habit => (
             <div 
               key={habit.id} 
               className="habit-card" 
@@ -845,6 +892,70 @@ const HabitDashboard = ({ onNavigateToExplore }) => {
         .empty-islands-box:hover { opacity: 1; border-color: white; background: rgba(255,255,255,0.02); }
         .empty-plus { font-size: 40px; margin-bottom: 10px; }
         .empty-logs { text-align: center; color: rgba(255,255,255,0.3); padding: 40px; }
+
+        /* 搜索栏样式 */
+        .search-section { margin-bottom: 30px; }
+        .search-container-dashboard { 
+          position: relative; 
+          max-width: 500px; 
+          margin: 0 auto; 
+        }
+        .search-icon-dashboard { 
+          position: absolute; 
+          left: 18px; 
+          top: 50%; 
+          transform: translateY(-50%); 
+          color: rgba(255,255,255,0.4); 
+        }
+        .search-input-dashboard { 
+          width: 100%; 
+          padding: 16px 50px; 
+          background: rgba(255,255,255,0.05); 
+          border: 1px solid rgba(255,255,255,0.1); 
+          border-radius: 20px; 
+          color: white; 
+          font-size: 15px; 
+          outline: none; 
+          transition: all 0.3s ease;
+        }
+        .search-input-dashboard:focus { 
+          border-color: rgba(99,102,241,0.5); 
+          background: rgba(255,255,255,0.08); 
+        }
+        .search-input-dashboard::placeholder { 
+          color: rgba(255,255,255,0.3); 
+        }
+        .search-clear-dashboard { 
+          position: absolute; 
+          right: 14px; 
+          top: 50%; 
+          transform: translateY(-50%); 
+          background: rgba(255,255,255,0.1); 
+          border: none; 
+          border-radius: 50%; 
+          width: 30px; 
+          height: 30px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          color: rgba(255,255,255,0.5); 
+          cursor: pointer; 
+          transition: all 0.2s ease;
+        }
+        .search-clear-dashboard:hover { 
+          background: rgba(255,255,255,0.2); 
+          color: white; 
+        }
+        .search-result-count { 
+          text-align: center; 
+          margin-top: 16px; 
+          color: rgba(255,255,255,0.5); 
+          font-size: 14px; 
+        }
+        .search-result-count .highlight { 
+          color: #a5b4fc; 
+          font-weight: 700; 
+        }
 
         @media (max-width: 600px) {
           .nature-modal-horizontal { flex-direction: column; padding: 25px; height: 90vh; overflow-y: auto; }

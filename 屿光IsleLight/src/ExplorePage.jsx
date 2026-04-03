@@ -1,17 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { ArrowLeft, Globe, Zap, User, ExternalLink, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Globe, Zap, User, ExternalLink, RefreshCw, Search, X } from 'lucide-react';
 import { useAccount } from 'wagmi';
 import { CONTRACT_ADDRESS, CONTRACT_ABI } from './config/contract';
+
+// 图标列表（用于哈希映射）
+const ICON_LIST = ['🌱', '🌊', '🏔️', '🔥', '☁️', '🌙', '☀️', '❄️', '🌵', '🦋', '🏃', '📚', '💪', '🎯', '⭐', '🌟', '💫', '✨', '🎨', '🎵'];
+
+// 颜色列表（用于哈希映射）
+const COLOR_LIST = ['#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#14b8a6', '#06b6d4'];
+
+// 根据字符串生成固定图标和颜色
+const hashToIcon = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  const iconIndex = Math.abs(hash) % ICON_LIST.length;
+  const colorIndex = Math.abs(hash) % COLOR_LIST.length;
+  return {
+    icon: ICON_LIST[iconIndex],
+    color: COLOR_LIST[colorIndex]
+  };
+};
 
 const ExplorePage = ({ onBack }) => {
   const { isConnected } = useAccount();
   const [lighthouses, setLighthouses] = useState([]);
+  const [filteredLighthouses, setFilteredLighthouses] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedLighthouse, setSelectedLighthouse] = useState(null);
   const [checkIns, setCheckIns] = useState([]);
   const [loadingCheckIns, setLoadingCheckIns] = useState(false);
+  const [userNickname, setUserNickname] = useState('');
 
   // 获取所有公开的灯塔（习惯）
   const fetchAllLighthouses = async () => {
@@ -29,21 +53,41 @@ const ExplorePage = ({ onBack }) => {
       
       const allLighthouses = await contract.getAllLighthouses();
       
-      const formattedLighthouses = allLighthouses.map((l, index) => ({
-        id: index,
-        contentHash: l.contentHash,
-        title: l.title,
-        timestamp: new Date(l.timestamp.toNumber() * 1000).toLocaleString('zh-CN'),
-        author: l.author,
-        authorShort: `${l.author.slice(0, 6)}...${l.author.slice(-4)}`
-      }));
+      const formattedLighthouses = allLighthouses.map((l, index) => {
+        const { icon, color } = hashToIcon(l.title + l.author);
+        return {
+          id: index,
+          contentHash: l.contentHash,
+          title: l.title,
+          timestamp: new Date(l.timestamp.toNumber() * 1000).toLocaleString('zh-CN'),
+          timestampRaw: l.timestamp.toNumber(),
+          author: l.author,
+          authorShort: `${l.author.slice(0, 6)}...${l.author.slice(-4)}`,
+          icon,
+          color
+        };
+      });
 
       setLighthouses(formattedLighthouses);
+      setFilteredLighthouses(formattedLighthouses);
     } catch (err) {
       console.error("获取公开岛屿失败:", err);
       setError("获取公开岛屿失败: " + (err.reason || err.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 获取用户昵称
+  const fetchUserNickname = async (userAddress) => {
+    try {
+      if (!window.ethereum) return '';
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+      const identity = await contract.getIdentity(userAddress);
+      return identity[0] || '';
+    } catch (err) {
+      return '';
     }
   };
 
@@ -61,6 +105,7 @@ const ExplorePage = ({ onBack }) => {
       const formattedCheckIns = userCheckIns.map((c, index) => ({
         id: index,
         timestamp: new Date(c.timestamp.toNumber() * 1000).toLocaleString('zh-CN'),
+        timestampRaw: c.timestamp.toNumber(),
         cid: c.cid
       }));
 
@@ -73,19 +118,42 @@ const ExplorePage = ({ onBack }) => {
     }
   };
 
+  // 搜索过滤
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredLighthouses(lighthouses);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+    const filtered = lighthouses.filter(l => 
+      l.title.toLowerCase().includes(query) ||
+      l.author.toLowerCase().includes(query) ||
+      l.authorShort.toLowerCase().includes(query)
+    );
+    setFilteredLighthouses(filtered);
+  }, [searchQuery, lighthouses]);
+
   useEffect(() => {
     fetchAllLighthouses();
   }, []);
 
-  const handleSelectLighthouse = (lighthouse) => {
+  const handleSelectLighthouse = async (lighthouse) => {
     setSelectedLighthouse(lighthouse);
     setCheckIns([]);
+    const nickname = await fetchUserNickname(lighthouse.author);
+    setUserNickname(nickname);
     fetchUserCheckIns(lighthouse.author);
   };
 
   // Avalanche Fuji 浏览器地址
   const getExplorerUrl = (address) => {
     return `https://testnet.snowtrace.io/address/${address}`;
+  };
+
+  // 清除搜索
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   return (
@@ -112,11 +180,13 @@ const ExplorePage = ({ onBack }) => {
             </button>
             
             <div className="detail-header">
-              <div className="detail-icon">🏝️</div>
+              <div className="detail-icon" style={{ background: `linear-gradient(135deg, ${selectedLighthouse.color}, #fff)` }}>
+                {selectedLighthouse.icon}
+              </div>
               <h2>{selectedLighthouse.title}</h2>
               <div className="author-info">
                 <User size={14} />
-                <span>{selectedLighthouse.authorShort}</span>
+                <span>{userNickname || selectedLighthouse.authorShort}</span>
                 <a 
                   href={getExplorerUrl(selectedLighthouse.author)} 
                   target="_blank" 
@@ -130,17 +200,17 @@ const ExplorePage = ({ onBack }) => {
             </div>
 
             <div className="checkins-section">
-              <h3><Zap size={16} /> 打卡记录</h3>
+              <h3><Zap size={16} /> 打卡记录 ({checkIns.length})</h3>
               {loadingCheckIns ? (
                 <div className="loading-state">加载中...</div>
               ) : checkIns.length > 0 ? (
                 <div className="checkins-list">
                   {checkIns.map((checkIn, index) => (
-                    <div key={index} className="checkin-item">
+                    <div key={index} className="checkin-item" style={{ borderLeftColor: selectedLighthouse.color }}>
                       <div className="checkin-icon">✨</div>
                       <div className="checkin-info">
                         <div className="checkin-time">{checkIn.timestamp}</div>
-                        <div className="checkin-cid">ID: {checkIn.cid}</div>
+                        <div className="checkin-cid">习惯ID: {checkIn.cid}</div>
                       </div>
                     </div>
                   ))}
@@ -159,10 +229,30 @@ const ExplorePage = ({ onBack }) => {
                 <h1>探索公开岛屿</h1>
               </div>
               <p className="header-desc">发现其他航行者公开的习惯灯塔</p>
-              <button className="refresh-btn" onClick={fetchAllLighthouses} disabled={loading}>
-                <RefreshCw size={16} className={loading ? 'spinning' : ''} />
-                刷新
-              </button>
+              
+              {/* 搜索框 */}
+              <div className="search-container">
+                <Search size={18} className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="搜索习惯名称或用户地址..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input"
+                />
+                {searchQuery && (
+                  <button className="search-clear" onClick={clearSearch}>
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+
+              <div className="header-actions">
+                <button className="refresh-btn" onClick={fetchAllLighthouses} disabled={loading}>
+                  <RefreshCw size={16} className={loading ? 'spinning' : ''} />
+                  刷新
+                </button>
+              </div>
             </div>
 
             {loading ? (
@@ -174,35 +264,44 @@ const ExplorePage = ({ onBack }) => {
               <div className="error-state">
                 <p>{error}</p>
               </div>
-            ) : lighthouses.length === 0 ? (
+            ) : filteredLighthouses.length === 0 ? (
               <div className="empty-state">
-                <div className="empty-icon">🌌</div>
-                <h3>宇宙中暂无公开岛屿</h3>
-                <p>成为第一个公开习惯的航行者吧！</p>
+                <div className="empty-icon">{searchQuery ? '🔍' : '🌌'}</div>
+                <h3>{searchQuery ? '未找到匹配的岛屿' : '宇宙中暂无公开岛屿'}</h3>
+                <p>{searchQuery ? '试试其他关键词' : '成为第一个公开习惯的航行者吧！'}</p>
               </div>
             ) : (
-              <div className="lighthouses-grid">
-                {lighthouses.map((lighthouse) => (
-                  <div 
-                    key={lighthouse.id} 
-                    className="lighthouse-card"
-                    onClick={() => handleSelectLighthouse(lighthouse)}
-                  >
-                    <div className="card-header">
-                      <span className="card-icon">🏝️</span>
-                      <div className="card-title">{lighthouse.title}</div>
-                    </div>
-                    <div className="card-author">
-                      <User size={12} />
-                      <span>{lighthouse.authorShort}</span>
-                    </div>
-                    <div className="card-time">{lighthouse.timestamp}</div>
-                    <div className="card-badge">
-                      <Globe size={10} /> 公开
-                    </div>
+              <>
+                {searchQuery && (
+                  <div className="search-result-info">
+                    找到 <span className="highlight">{filteredLighthouses.length}</span> 个匹配的岛屿
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="lighthouses-grid">
+                  {filteredLighthouses.map((lighthouse) => (
+                    <div 
+                      key={lighthouse.id} 
+                      className="lighthouse-card"
+                      onClick={() => handleSelectLighthouse(lighthouse)}
+                    >
+                      <div className="card-header">
+                        <span className="card-icon" style={{ background: `linear-gradient(135deg, ${lighthouse.color}, #fff)` }}>
+                          {lighthouse.icon}
+                        </span>
+                        <div className="card-title">{lighthouse.title}</div>
+                      </div>
+                      <div className="card-author">
+                        <User size={12} />
+                        <span>{lighthouse.authorShort}</span>
+                      </div>
+                      <div className="card-time">{lighthouse.timestamp}</div>
+                      <div className="card-badge">
+                        <Globe size={10} /> 公开
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </>
         )}
@@ -275,7 +374,7 @@ const ExplorePage = ({ onBack }) => {
 
         .explore-header {
           text-align: center;
-          margin-bottom: 60px;
+          margin-bottom: 40px;
         }
 
         .header-title {
@@ -298,7 +397,70 @@ const ExplorePage = ({ onBack }) => {
         .header-desc {
           color: rgba(255, 255, 255, 0.5);
           font-size: 16px;
-          margin: 0 0 20px 0;
+          margin: 0 0 24px 0;
+        }
+
+        .search-container {
+          position: relative;
+          max-width: 500px;
+          margin: 0 auto 24px;
+        }
+
+        .search-icon {
+          position: absolute;
+          left: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: rgba(255, 255, 255, 0.4);
+        }
+
+        .search-input {
+          width: 100%;
+          padding: 14px 44px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 16px;
+          color: white;
+          font-size: 15px;
+          outline: none;
+          transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+          border-color: rgba(99, 102, 241, 0.5);
+          background: rgba(255, 255, 255, 0.08);
+        }
+
+        .search-input::placeholder {
+          color: rgba(255, 255, 255, 0.3);
+        }
+
+        .search-clear {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          background: rgba(255, 255, 255, 0.1);
+          border: none;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(255, 255, 255, 0.5);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .search-clear:hover {
+          background: rgba(255, 255, 255, 0.2);
+          color: white;
+        }
+
+        .header-actions {
+          display: flex;
+          justify-content: center;
         }
 
         .refresh-btn {
@@ -331,6 +493,18 @@ const ExplorePage = ({ onBack }) => {
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+
+        .search-result-info {
+          text-align: center;
+          margin-bottom: 24px;
+          color: rgba(255, 255, 255, 0.5);
+          font-size: 14px;
+        }
+
+        .search-result-info .highlight {
+          color: #a5b4fc;
+          font-weight: 700;
         }
 
         .loading-state {
@@ -426,7 +600,13 @@ const ExplorePage = ({ onBack }) => {
         }
 
         .card-icon {
-          font-size: 32px;
+          font-size: 28px;
+          width: 50px;
+          height: 50px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .card-title {
@@ -502,8 +682,15 @@ const ExplorePage = ({ onBack }) => {
         }
 
         .detail-icon {
-          font-size: 60px;
-          margin-bottom: 16px;
+          font-size: 48px;
+          width: 80px;
+          height: 80px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
         }
 
         .detail-header h2 {
@@ -551,6 +738,8 @@ const ExplorePage = ({ onBack }) => {
           display: flex;
           flex-direction: column;
           gap: 12px;
+          max-height: 400px;
+          overflow-y: auto;
         }
 
         .checkin-item {
@@ -601,6 +790,10 @@ const ExplorePage = ({ onBack }) => {
           .lighthouse-detail {
             padding: 24px;
             margin: 0 10px;
+          }
+
+          .search-container {
+            margin: 0 10px 24px;
           }
         }
       `}</style>
