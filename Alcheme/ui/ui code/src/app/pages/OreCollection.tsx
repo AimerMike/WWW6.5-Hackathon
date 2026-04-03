@@ -174,7 +174,7 @@ export default function OreCollection() {
 
         {/* Crystals grid */}
         <div 
-          className="flex flex-wrap justify-center gap-8 mb-12 overflow-y-auto"
+          className="flex flex-wrap justify-center gap-8 mb-12 overflow-visible"
           style={{
             maxHeight: 'calc(85vh - 240px)',
             padding: '20px'
@@ -224,9 +224,14 @@ export default function OreCollection() {
                     </div>
                   )}
 
-                  {/* Hover tooltip */}
+                  {/* Hover tooltip - FIXED */}
                   <div 
-                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50"
+                    className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                    style={{
+                      zIndex: 99999,
+                      position: 'absolute',
+                      transform: 'translate(-50%, -10px)'
+                    }}
                   >
                     <div 
                       className="px-4 py-3 rounded-lg shadow-2xl"
