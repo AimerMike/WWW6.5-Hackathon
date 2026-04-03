@@ -30,8 +30,8 @@ app.get('/health', (req, res) => {
 // 全局错误处理
 app.use(errorMiddleware);
 
-// 启动服务
-app.listen(PORT, () => {
+// 启动服务 ✅ 修改后，外网就能访问了
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 后端服务已启动，运行在端口 ${PORT}`);
   console.log(`📊 健康检查地址：/health`);
 });
