@@ -1,22 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, ExternalLink, Globe, Shield, Star, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, ExternalLink, Shield } from "lucide-react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { parseEther } from "viem";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ReviewDialog } from "@/components/common/ReviewDialog";
 import { RingChart, ScoreBar } from "@/components/common/ring-chart";
 import { MOCK_MENTOR_DETAIL, getMentorReviews } from "@/data/detail-mock";
 import type { ReviewItem } from "@/data/detail-mock";
 import { cn } from "@/lib/utils";
-import { REVIEW_CONTRACT_ADDRESS, reviewContractAbi } from "@/lib/contract";
 
 type PageProps = {
   params: { id: string };
@@ -53,117 +50,12 @@ function getTagCloud(tags: Record<string, number>) {
 }
 
 export default function MentorDetailPage({ params }: PageProps) {
+  const router = useRouter();
   const id = decodeURIComponent(params.id);
   const mentor = MOCK_MENTOR_DETAIL[id];
   const allReviews = getMentorReviews(id);
   const [filter, setFilter] = useState<"all" | "verified">("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [reviews, setReviews] = useState<ReviewItem[]>(allReviews);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-
-  // Web3 hooks
-  const { address, isConnected } = useAccount();
-  const { data: hash, writeContractAsync, isPending: isWriting } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash
-  });
-
-  // 将 AI 分析的分数映射到合约要求的 5 个维度
-  const mapScoresToDimScores = (scores?: Record<string, number>): [bigint, bigint, bigint, bigint, bigint] => {
-    const defaultScore = scores?.overall ?? 3;
-    return [
-      BigInt(Math.round((scores?.communication ?? defaultScore) * 5)), // 成长支持
-      BigInt(Math.round((scores?.technical ?? defaultScore) * 5)),    // 预期清晰度
-      BigInt(Math.round((scores?.communication ?? defaultScore) * 5)), // 沟通质量
-      BigInt(Math.round((scores?.technical ?? defaultScore) * 5)),    // 工作强度
-      BigInt(Math.round((scores?.communication ?? defaultScore) * 5)), // 尊重与包容
-    ];
-  };
-
-  // 将字符串转换为 bytes32
-  const stringToBytes32 = (str: string): `0x${string}` => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashHex = Array.from(data).map(b => b.toString(16).padStart(2, '0')).join('');
-    return `0x${hashHex.padEnd(64, '0').slice(0, 64)}`;
-  };
-
-  const handleSubmitReview = async (review: {
-    rating: number;
-    comment: string;
-    tags: string[];
-    scores?: Record<string, number>;
-  }) => {
-    setSubmitError(null);
-
-    // 如果钱包未连接，提示错误
-    if (!isConnected || !address) {
-      setSubmitError("请先连接钱包后再提交评价");
-      return;
-    }
-
-    let txHash: string | undefined;
-
-    // 如果钱包已连接，尝试上链
-    try {
-      // TODO: 替换为真实的 credentialId（需要从 SBT 获取）
-      const credentialId = 1; // 临时使用 tokenId=1 测试
-      const targetId = stringToBytes32(id);
-      const dimScores = mapScoresToDimScores(review.scores);
-
-      // 生成简单的 CID（实际应该上传到 IPFS）
-      const cid = stringToBytes32(`review-${Date.now()}`);
-
-      const writeHash = await writeContractAsync({
-        address: REVIEW_CONTRACT_ADDRESS,
-        abi: reviewContractAbi,
-        functionName: 'submitReview',
-        args: [
-          BigInt(credentialId),    // _credentialId
-          targetId,                // _targetId
-          "mentor",                // _targetType
-          BigInt(review.rating),   // _overallScore
-          dimScores as unknown as any, // _dimScores
-          cid,                     // _cid
-        ],
-      } as any);
-
-      // 等待交易确认（这里需要用户确认钱包中的交易）
-      // 如果用户拒绝或交易失败，writeContractAsync 会抛出错误
-      txHash = writeHash;
-
-    } catch (error: any) {
-      console.error("上链失败:", error);
-      // 提取错误信息
-      const errorMessage = error?.message || "上链失败";
-      let errorText = "上链失败";
-      if (errorMessage.includes("user rejected")) {
-        errorText = "您已取消交易";
-      } else if (errorMessage.includes("credential")) {
-        errorText = "您的 SBT 凭证无效，请检查是否持有有效的凭证";
-      } else if (errorMessage.includes("Already reviewed")) {
-        errorText = "您已经评价过此 Mentor";
-      } else {
-        errorText = `上链失败: ${errorMessage}`;
-      }
-      setSubmitError(errorText);
-      throw new Error(errorText); // 抛出错误，让 ReviewDialog 知道失败
-    }
-
-    // 只有上链成功才创建评论
-    const newReview: ReviewItem = {
-      id: `review-${Date.now()}`,
-      author: `0x${address.slice(2, 8)}`,
-      authorAddress: address,
-      rating: review.rating,
-      date: new Date().toLocaleDateString("zh-CN"),
-      comment: review.comment,
-      tags: review.tags,
-      txHash: txHash,
-    };
-
-    setReviews([newReview, ...reviews]);
-  };
+  const [reviews] = useState<ReviewItem[]>(allReviews);
 
   if (!mentor) {
     return (
@@ -245,7 +137,9 @@ export default function MentorDetailPage({ params }: PageProps) {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
-                      <Globe className="h-4 w-4" />
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
                     </a>
                   )}
                   {mentor.github && (
@@ -255,13 +149,23 @@ export default function MentorDetailPage({ params }: PageProps) {
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     >
-                      <Globe className="h-4 w-4" />
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                      </svg>
                     </a>
                   )}
                 </div>
 
                 {/* Write Review Button */}
-                <Button className="mt-4 w-full" size="lg" onClick={() => setDialogOpen(true)}>
+                <Button
+                  className="mt-4 w-full"
+                  size="lg"
+                  onClick={() => {
+                    // 将导师名字存储到 localStorage，供 review 页面使用
+                    localStorage.setItem("rmm_mentor_name", mentor.name);
+                    router.push("/review");
+                  }}
+                >
                   写评价
                 </Button>
               </CardContent>
@@ -444,18 +348,6 @@ export default function MentorDetailPage({ params }: PageProps) {
           </div>
         </main>
       </div>
-
-      {/* Review Modal */}
-      {mentor && (
-        <ReviewDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          mentorId={mentor.id}
-          mentorName={mentor.name}
-          error={submitError}
-          onSubmit={handleSubmitReview}
-        />
-      )}
     </div>
   );
 }

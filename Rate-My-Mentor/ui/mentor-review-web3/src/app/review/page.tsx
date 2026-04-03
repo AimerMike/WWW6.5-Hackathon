@@ -73,6 +73,19 @@ export default function ReviewPage() {
     } catch {
       setSbt(null);
     }
+
+    // 尝试读取从导师详情页传递过来的导师名字
+    try {
+      const mentorName = localStorage.getItem("rmm_mentor_name");
+      if (mentorName) {
+        setTargetName(mentorName);
+        setTargetType("mentor");
+        // 读取后清除，避免刷新后残留
+        localStorage.removeItem("rmm_mentor_name");
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   const [phase, setPhase] = useState<Phase>("input");
