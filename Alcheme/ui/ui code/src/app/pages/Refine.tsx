@@ -1,8 +1,8 @@
 import { useNavigate, useLocation } from 'react-router';
 import backgroundImage from 'figma:asset/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
-import characterImage from 'figma:asset/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
+import characterImage from 'figma:asset/bfee606d5dfec7a73890cb5b71e5c43e6c26854.png';
 import cauldronImage from 'figma:asset/25105b31b346d820df525c421dd06be660cca0e5.png';
-import collectButton from 'figma:asset/f103e578864ca4d98d1d93e72ca377df8077381a.png';
+import collectButton from 'figma:asset/f103e578864ca4d98d1d93e32ca377df807381a.png';
 import refineButton from 'figma:asset/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
 import awakenButton from 'figma:asset/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
 import profileButton from 'figma:asset/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
@@ -14,12 +14,10 @@ import { Sparkles, Flame } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useState, useEffect } from 'react';
 
-// Import card backgrounds
 import cardBg1 from 'figma:asset/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
 import cardBg2 from 'figma:asset/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
 import cardBg3 from 'figma:asset/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
 
-// Import stamp patterns
 import stamp1 from 'figma:asset/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
 import stamp2 from 'figma:asset/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
 import stamp3 from 'figma:asset/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
@@ -37,7 +35,6 @@ export default function Refine() {
   const refiningCount = location.state?.refiningCount || 0;
   const selectedOres = location.state?.selectedOres || [];
   
-  // Get collected crystals count from localStorage - read actual ores count
   const [totalCrystals, setTotalCrystals] = useState(0);
   const [showSmoke, setShowSmoke] = useState(false);
   const [showCard, setShowCard] = useState(false);
@@ -48,72 +45,72 @@ export default function Refine() {
   const cardBackgrounds = [cardBg1, cardBg2, cardBg3];
   const stampPatterns = [stamp1, stamp2, stamp3];
 
+  // ==============================
+  // 🔌 从接口拉取矿石总数
+  // ==============================
   useEffect(() => {
-    // Load actual count from collectedOres array
-    const loadOresCount = () => {
-      const oresData = localStorage.getItem('collectedOres');
-      const ores = oresData ? JSON.parse(oresData) : [];
-      setTotalCrystals(ores.length);
+    const loadOresCount = async () => {
+      try {
+        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/ores");
+        const data = await res.json();
+        setTotalCrystals (data.data?.length || 0);
+      } catch (e) {
+        const oresData = localStorage.getItem('collectedOres');
+        const ores = oresData ? JSON.parse(oresData) : [];
+        setTotalCrystals(ores.length);
+      }
     };
 
     loadOresCount();
-
-    // Listen for updates from other pages
-    const handleOresUpdate = () => {
-      loadOresCount();
-    };
-
+    const handleOresUpdate = () => loadOresCount();
     window.addEventListener('oresUpdated', handleOresUpdate);
     return () => window.removeEventListener('oresUpdated', handleOresUpdate);
   }, []);
 
-  // Check if we should start the refining animation
   useEffect(() => {
     if (refiningCount > 0) {
-      // Randomly select card and stamp
       setSelectedCard(Math.floor(Math.random() * 3));
       setSelectedStamp(Math.floor(Math.random() * 3));
-      
-      // Start smoke animation
       setShowSmoke(true);
-      
-      // Show card after 3 seconds
       setTimeout(() => {
         setShowCard(true);
       }, 3000);
     }
   }, [refiningCount]);
 
-  const handleConfirmCard = () => {
-    // Save card to collection
-    const cardsData = localStorage.getItem('refinedCards');
-    const cards = cardsData ? JSON.parse(cardsData) : [];
-    
+  // ==============================
+  // 🔌 确认卡片 → 提交到后端 /api/cards
+  // ==============================
+  const handleConfirmCard = async () => {
     const newCard = {
-      id: Date.now().toString(),
       cardBgIndex: selectedCard,
       stampIndex: selectedStamp,
       text: cardText.trim(),
-      date: new Date().toISOString(),
       ores: selectedOres.map((ore: any) => ({
         date: ore.date,
         content: ore.content
       }))
     };
-    
-    cards.push(newCard);
-    localStorage.setItem('refinedCards', JSON.stringify(cards));
-    
-    // Dispatch event to notify other components
+
+    try {
+      await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCard)
+      });
+    } catch (err) {
+      const cardsData = localStorage.getItem('refinedCards');
+      const cards = cardsData ? JSON.parse(cardsData) : [];
+      cards.push({ ...newCard, id: Date.now().toString(), date: new Date().toISOString() });
+      localStorage.setItem('refinedCards', JSON.stringify(cards));
+    }
+
     window.dispatchEvent(new Event('cardsUpdated'));
-    
-    // Hide card and reset
     setShowCard(false);
     setShowSmoke(false);
     setCardText('');
   };
 
-  // Mock crystal collection
   const [crystals] = useState<Crystal[]>([
     { id: 1, color: '#e91e63', gradient: 'linear-gradient(135deg, #f8bbd0 0%, #e91e63 100%)', image: 'https://images.unsplash.com/photo-1771580927643-36aaa2709141?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200' },
     { id: 2, color: '#10b981', gradient: 'linear-gradient(135deg, #a7f3d0 0%, #10b981 100%)', image: 'https://images.unsplash.com/photo-1771580927643-36aaa2709141?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200' },
@@ -144,7 +141,6 @@ export default function Refine() {
         fontFamily: "'Cormorant Garamond', serif"
       }}
     >
-      {/* Magical particles overlay */}
       <div className="absolute inset-0 pointer-events-none">
         {[...Array(30)].map((_, i) => {
           const duration = 2 + Math.random() * 3;
@@ -168,12 +164,9 @@ export default function Refine() {
         })}
       </div>
 
-      {/* Main container */}
       <div className="relative w-full max-w-7xl bg-gradient-to-br from-purple-100/40 via-pink-50/30 to-cyan-100/40 rounded-3xl shadow-2xl border-4 border-amber-200/60 backdrop-blur-sm p-8">
         
-        {/* Top section - Title and Navigation */}
         <div className="flex items-start justify-between mb-6">
-          {/* Title and tagline - Using logo image like Home page */}
           <div>
             <img 
               src={alchemeLogo} 
@@ -182,7 +175,6 @@ export default function Refine() {
             />
           </div>
 
-          {/* Navigation buttons */}
           <div className="flex gap-4">
             <button 
               onClick={() => navigate('/')}
@@ -211,10 +203,8 @@ export default function Refine() {
           </div>
         </div>
 
-        {/* Main content area - Grid layout matching Home */}
         <div className="grid grid-cols-12 gap-8 mt-8">
           
-          {/* Left - Character */}
           <div className="col-span-4 flex items-center justify-center">
             <div className="relative">
               <ImageWithFallback 
@@ -230,14 +220,10 @@ export default function Refine() {
             </div>
           </div>
 
-          {/* Center - Magic Cauldron and Cabinet */}
           <div className="col-span-4 flex flex-col items-center justify-center gap-6">
-            {/* Cauldron - center */}
             <div className="relative flex items-center justify-center" style={{ marginTop: '60px', marginLeft: '40px' }}>
-              {/* Glow effect */}
               <div className="absolute inset-0 bg-gradient-radial from-purple-300/30 via-transparent to-transparent blur-2xl" />
 
-              {/* Cauldron container */}
               <div className="relative z-10 flex items-center justify-center">
                 <img 
                   src={cauldronImage} 
@@ -249,7 +235,6 @@ export default function Refine() {
                   }}
                 />
 
-                {/* Colorful smoke coming from cauldron */}
                 {showSmoke && (
                   <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none">
                     {[...Array(10)].map((_, i) => (
@@ -276,7 +261,6 @@ export default function Refine() {
                   </div>
                 )}
 
-                {/* Magic sparkles around cauldron */}
                 {[...Array(8)].map((_, i) => {
                   const duration = 2 + Math.random();
                   const delay = i * 0.2;
@@ -298,11 +282,8 @@ export default function Refine() {
             </div>
           </div>
 
-          {/* Right - Owl and parchment with Total Ores */}
           <div className="col-span-4 flex flex-col items-center justify-start relative pt-4">
-            {/* Container with Cabinet and Owl side by side */}
             <div className="relative w-full flex items-start justify-center gap-6 mb-4">
-              {/* Crystal Cabinet with click hint - left side */}
               <div className="flex flex-col items-center">
                 <button
                   onClick={() => navigate('/ore-collection')}
@@ -320,7 +301,6 @@ export default function Refine() {
                   />
                 </button>
 
-                {/* Click hint - directly below cabinet */}
                 <div className="mt-2 whitespace-nowrap">
                   <span 
                     className="text-xs animate-pulse"
@@ -336,7 +316,6 @@ export default function Refine() {
                 </div>
               </div>
 
-              {/* Steampunk Owl - right side */}
               <div className="relative z-10">
                 <img 
                   src={owlImage} 
@@ -349,21 +328,16 @@ export default function Refine() {
               </div>
             </div>
 
-            {/* Owl and parchment with Total Ores */}
             <div className="relative w-full max-w-xs flex flex-col items-center">
-              {/* Parchment scroll with Total Ores */}
               <div className="relative w-full" style={{ marginTop: '-50px' }}>
-                {/* Parchment background image */}
                 <img 
                   src={parchmentScroll} 
                   alt="Parchment Scroll" 
                   className="w-full h-auto drop-shadow-xl"
                 />
                 
-                {/* Content overlay */}
                 <div className="absolute inset-0 flex items-center justify-center px-12 py-12">
                   <div className="flex flex-col items-center justify-center gap-4 w-full">
-                    {/* Total Ores heading */}
                     <div 
                       style={{
                         fontFamily: "'Cinzel', serif",
@@ -377,7 +351,6 @@ export default function Refine() {
                       Total Ores
                     </div>
 
-                    {/* Ore count */}
                     <div 
                       style={{
                         fontFamily: "'Cinzel', serif",
@@ -398,7 +371,6 @@ export default function Refine() {
         </div>
       </div>
 
-      {/* Card popup overlay */}
       {showCard && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center"
@@ -414,9 +386,7 @@ export default function Refine() {
               animation: 'cardZoomIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1)'
             }}
           >
-            {/* Card with stamp */}
             <div className="relative flex flex-col items-center">
-              {/* Card background */}
               <div 
                 className="relative"
                 style={{
@@ -430,7 +400,6 @@ export default function Refine() {
                   className="w-full h-auto drop-shadow-2xl"
                 />
 
-                {/* Stamp pattern in the center circle */}
                 <div 
                   className="absolute"
                   style={{
@@ -452,7 +421,6 @@ export default function Refine() {
                 </div>
               </div>
 
-              {/* Text input below card */}
               <div className="mt-6 w-full max-w-md">
                 <textarea
                   value={cardText}
@@ -472,7 +440,6 @@ export default function Refine() {
               </div>
             </div>
 
-            {/* Confirm button */}
             <button
               onClick={handleConfirmCard}
               className="hover:scale-110 transition-all"
