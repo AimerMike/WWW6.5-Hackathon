@@ -1,3 +1,6 @@
+// ✅ 第一行：必须先加载环境变量！！！
+import 'dotenv/config';
+
 import express from 'express';
 import cors from 'cors';
 import { env } from './config/env';
