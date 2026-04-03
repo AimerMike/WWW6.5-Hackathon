@@ -12,6 +12,30 @@ if (Number.isNaN(port) || port <= 0) throw new Error(`Invalid PORT: "${rawPort}"
 
 const app: Express = express();
 
+// ─── Human-readable request logger ─────────────────────────────────────────
+app.use((req, res, next) => {
+  const start = Date.now();
+  const { method, url } = req;
+
+  // Log request
+  const timestamp = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+  console.log(`\n📥 [${timestamp}] ${method} ${url}`);
+  if (method !== "GET" && req.body && Object.keys(req.body).length > 0) {
+    console.log(`   📦 Body: ${JSON.stringify(req.body).slice(0, 200)}`);
+  }
+
+  // Log response
+  const originalEnd = res.end;
+  res.end = function (...args) {
+    const duration = Date.now() - start;
+    const statusColor = res.statusCode >= 400 ? "❌" : res.statusCode >= 300 ? "🔄" : "✅";
+    console.log(`   ${statusColor} ${res.statusCode}  (${duration}ms)`);
+    return originalEnd.apply(this, args);
+  };
+
+  next();
+});
+
 app.use(
   pinoHttp({
     logger,
@@ -37,5 +61,6 @@ app.listen(port, (err) => {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
-  logger.info({ port }, "Server listening");
+  logger.info({ port }, `Server listening on http://localhost:${port}`);
+  console.log(`\n🚀 Server running at http://localhost:${port}\n`);
 });

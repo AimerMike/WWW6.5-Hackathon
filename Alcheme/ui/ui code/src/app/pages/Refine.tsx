@@ -1,26 +1,26 @@
 import { useNavigate, useLocation } from 'react-router';
-import backgroundImage from 'figma:asset/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
-import characterImage from 'figma:asset/bfee606d5dfec7a73890cb5b71e5c43e6c26854.png';
-import cauldronImage from 'figma:asset/25105b31b346d820df525c421dd06be660cca0e5.png';
-import collectButton from 'figma:asset/f103e578864ca4d98d1d93e32ca377df807381a.png';
-import refineButton from 'figma:asset/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
-import awakenButton from 'figma:asset/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
-import profileButton from 'figma:asset/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
-import owlImage from 'figma:asset/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
-import alchemeLogo from 'figma:asset/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
-import crystalCabinet from 'figma:asset/9386d55d614184d987c9810f9d4db867147dc751.png';
-import parchmentScroll from 'figma:asset/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
+import backgroundImage from '../../assets/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
+import characterImage from '../../assets/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
+import cauldronImage from '../../assets/25105b31b346d820df525c421dd06be660cca0e5.png';
+import collectButton from '../../assets/f103e578864ca4d98d1d93e72ca377df8077381a.png';
+import refineButton from '../../assets/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
+import awakenButton from '../../assets/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
+import profileButton from '../../assets/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
+import owlImage from '../../assets/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
+import alchemeLogo from '../../assets/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
+import crystalCabinet from '../../assets/9386d55d614184d987c9810f9d4db867147dc751.png';
+import parchmentScroll from '../../assets/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
 import { Sparkles, Flame } from 'lucide-react';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { useState, useEffect } from 'react';
 
-import cardBg1 from 'figma:asset/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
-import cardBg2 from 'figma:asset/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
-import cardBg3 from 'figma:asset/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
+import cardBg1 from '../../assets/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
+import cardBg2 from '../../assets/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
+import cardBg3 from '../../assets/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
 
-import stamp1 from 'figma:asset/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
-import stamp2 from 'figma:asset/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
-import stamp3 from 'figma:asset/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
+import stamp1 from '../../assets/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
+import stamp2 from '../../assets/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
+import stamp3 from '../../assets/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
 
 interface Crystal {
   id: number;
@@ -51,7 +51,7 @@ export default function Refine() {
   useEffect(() => {
     const loadOresCount = async () => {
       try {
-        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/ores");
+        const res = await fetch("/api/ores");
         const data = await res.json();
         setTotalCrystals (data.data?.length || 0);
       } catch (e) {
@@ -79,26 +79,34 @@ export default function Refine() {
   }, [refiningCount]);
 
   // ==============================
-  // 🔌 确认卡片 → 提交到后端 /api/cards
+  // 🔌 确认卡片 → 提交到后端 /api/smelt
   // ==============================
   const handleConfirmCard = async () => {
-    const newCard = {
-      cardBgIndex: selectedCard,
-      stampIndex: selectedStamp,
-      text: cardText.trim(),
-      ores: selectedOres.map((ore: any) => ({
-        date: ore.date,
-        content: ore.content
-      }))
-    };
+    const oreIds = selectedOres.map((ore: any) => ore.id).filter((id: number) => typeof id === 'number' && id > 0);
 
     try {
-      await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newCard)
-      });
+      if (oreIds.length > 0) {
+        await fetch("/api/smelt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: cardText.trim() || undefined,
+            description: "",
+            oreIds,
+            mode: "A"
+          })
+        });
+      }
     } catch (err) {
+      const newCard = {
+        cardBgIndex: selectedCard,
+        stampIndex: selectedStamp,
+        text: cardText.trim(),
+        ores: selectedOres.map((ore: any) => ({
+          date: ore.date,
+          content: ore.content
+        }))
+      };
       const cardsData = localStorage.getItem('refinedCards');
       const cards = cardsData ? JSON.parse(cardsData) : [];
       cards.push({ ...newCard, id: Date.now().toString(), date: new Date().toISOString() });

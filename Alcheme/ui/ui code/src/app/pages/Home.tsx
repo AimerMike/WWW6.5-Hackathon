@@ -1,24 +1,24 @@
 import { useNavigate } from 'react-router';
-import backgroundImage from 'figma:asset/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
-import characterImage from 'figma:asset/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
-import crystalImage from 'figma:asset/3426c04b68d9b86397088a381e18adf4fa12dca2.png';
-import magicOrbsImage from 'figma:asset/28caacd1fffa5b73fafec6bbbc5a0ce3c9ecd880.png';
-import collectButton from 'figma:asset/f103e578864ca4d98d1d93e72ca377df8077381a.png';
-import refineButton from 'figma:asset/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
-import awakenButton from 'figma:asset/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
-import profileButton from 'figma:asset/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
-import owlImage from 'figma:asset/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
-import alchemeLogo from 'figma:asset/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
-import parchmentScroll from 'figma:asset/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
+import backgroundImage from '../../assets/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
+import characterImage from '../../assets/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
+import crystalImage from '../../assets/3426c04b68d9b86397088a381e18adf4fa12dca2.png';
+import magicOrbsImage from '../../assets/28caacd1fffa5b73fafec6bbbc5a0ce3c9ecd880.png';
+import collectButton from '../../assets/f103e578864ca4d98d1d93e72ca377df8077381a.png';
+import refineButton from '../../assets/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
+import awakenButton from '../../assets/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
+import profileButton from '../../assets/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
+import owlImage from '../../assets/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
+import alchemeLogo from '../../assets/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
+import parchmentScroll from '../../assets/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
 import { Sparkles } from 'lucide-react';
 
-import crystal1 from 'figma:asset/6e4310e7eedb7599a8783ae85915384fa1cdb41a.png';
-import crystal2 from 'figma:asset/c9271aa2b5c4b3ac4fd8114695354054ec89c320.png';
-import crystal3 from 'figma:asset/422998f75fa5b2894d6c25e42f9caa86c99f9321.png';
-import crystal4 from 'figma:asset/4a6ca87b1626e3188c8da1e6e3437313330918fd.png';
-import crystal5 from 'figma:asset/4331dd7b68e3e3da6cc1381fab0958d10762790c.png';
-import crystal6 from 'figma:asset/83aeacc4fc141482124734bd80a9fc84f4b2c521.png';
-import crystal7 from 'figma:asset/631bbd517278741d8b4593c3ac1af0dc44681864.png';
+import crystal1 from '../../assets/6e4310e7eedb7599a8783ae85915384fa1cdb41a.png';
+import crystal2 from '../../assets/c9271aa2b5c4b3ac4fd8114695354054ec89c320.png';
+import crystal3 from '../../assets/422998f75fa5b2894d6c25e42f9caa86c99f9321.png';
+import crystal4 from '../../assets/4a6ca87b1626e3188c8da1e6e3437313330918fd.png';
+import crystal5 from '../../assets/4331dd7b68e3e3da6cc1381fab0958d10762790c.png';
+import crystal6 from '../../assets/83aeacc4fc141482124734bd80a9fc84f4b2c521.png';
+import crystal7 from '../../assets/631bbd517278741d8b4593c3ac1af0dc44681864.png';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ export default function Home() {
   // ==============================
   const handleCollect = async (taskName: string) => {
     try {
-      const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/mine", {
+      const res = await fetch("/api/mine", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

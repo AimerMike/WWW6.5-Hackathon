@@ -3,14 +3,14 @@ import { useState, useEffect } from 'react';
 import { X, Sparkles } from 'lucide-react';
 
 // Import card backgrounds
-import cardBg1 from 'figma:asset/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
-import cardBg2 from 'figma:asset/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
-import cardBg3 from 'figma:asset/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
+import cardBg1 from '../../assets/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
+import cardBg2 from '../../assets/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
+import cardBg3 from '../../assets/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
 
 // Import stamp patterns
-import stamp1 from 'figma:asset/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
-import stamp2 from 'figma:asset/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
-import stamp3 from 'figma:asset/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
+import stamp1 from '../../assets/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
+import stamp2 from '../../assets/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
+import stamp3 from '../../assets/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
 
 interface Card {
   id: string;
@@ -38,7 +38,7 @@ export default function CardGallery() {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/cards");
+        const res = await fetch("/api/cards");
         const data = await res.json();
         setCards(data.data || []);
       } catch (e) {

@@ -1,25 +1,25 @@
 import { useNavigate, useSearchParams } from 'react-router';
-import backgroundImage from 'figma:asset/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
-import characterImage from 'figma:asset/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
-import collectButton from 'figma:asset/f103e578864ca4d98d1d93e72ca377df8077381a.png';
-import refineButton from 'figma:asset/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
-import awakenButton from 'figma:asset/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
-import profileButton from 'figma:asset/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
-import owlImage from 'figma:asset/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
-import alchemeLogo from 'figma:asset/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
-import parchmentScroll from 'figma:asset/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
-import awakenDoor from 'figma:asset/dacf8af5f4cb3701c8f630102721791cf2d07102.png';
-import medalImage from 'figma:asset/99b83df7ca82c99f905eaf13a84586014ff41499.png';
+import backgroundImage from '../../assets/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
+import characterImage from '../../assets/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
+import collectButton from '../../assets/f103e578864ca4d98d1d93e72ca377df8077381a.png';
+import refineButton from '../../assets/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
+import awakenButton from '../../assets/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
+import profileButton from '../../assets/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
+import owlImage from '../../assets/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
+import alchemeLogo from '../../assets/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
+import parchmentScroll from '../../assets/6e9c0278614ee59e3fa39d8a0594cbf4800e013a.png';
+import awakenDoor from '../../assets/dacf8af5f4cb3701c8f630102721791cf2d07102.png';
+import medalImage from '../../assets/99b83df7ca82c99f905eaf13a84586014ff41499.png';
 import { Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-import cardBg1 from 'figma:asset/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
-import cardBg2 from 'figma:asset/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
-import cardBg3 from 'figma:asset/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
+import cardBg1 from '../../assets/36f068e9e853e013a326ddfeb3134365b8967d6f.png';
+import cardBg2 from '../../assets/0beaaa20696396b0997d391dc1ed91d00f9eb7d8.png';
+import cardBg3 from '../../assets/b24f257b05ef0a618e241f85ac4368499ebda3c0.png';
 
-import stamp1 from 'figma:asset/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
-import stamp2 from 'figma:asset/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
-import stamp3 from 'figma:asset/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
+import stamp1 from '../../assets/09ac11079bc3070142d0c981f2a1e6f042ae75a2.png';
+import stamp2 from '../../assets/d1ca70bd3631afc028f85c903ce19dacbbe493b9.png';
+import stamp3 from '../../assets/981b85fbc4b9bb9aba7723567677e46e9d1a3fb8.png';
 
 interface Card {
   id: string;
@@ -52,7 +52,7 @@ export default function Awaken() {
   useEffect(() => {
     const fetchCards = async () => {
       try {
-        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/cards");
+        const res = await fetch("/api/cards");
         const data = await res.json();
         setTotalCards(data.data?.length || 0);
       } catch (e) {
@@ -89,7 +89,7 @@ export default function Awaken() {
   const handleConfirmMedal = async () => {
     try {
       const cardIds = selectedCards.map(c => c.id);
-      await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/forge", {
+      await fetch("/api/forge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

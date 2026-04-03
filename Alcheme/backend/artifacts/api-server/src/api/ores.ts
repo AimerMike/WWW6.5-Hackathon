@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
-import { getAllOres, insertOre, formatOre } from "../models/supabase.js";
+import { getAllOres, insertOre, deleteOre, formatOre } from "../models/supabase.js";
 import { fail, serverError } from "../utils/response.js";
 
 const router: IRouter = Router();
@@ -15,7 +15,7 @@ const mineSchema = z.object({
 router.get("/ores", async (req, res) => {
   try {
     const ores = await getAllOres();
-    res.json(ores.map(formatOre));
+    res.json({ data: ores.map(formatOre) });
   } catch (err) {
     req.log.error({ err }, "Failed to get ores");
     serverError(res);
@@ -37,6 +37,22 @@ router.post("/mine", async (req, res) => {
   } catch (err) {
     req.log.error({ err }, "Failed to create ore");
     serverError(res, "矿石采集失败，请重试");
+  }
+});
+
+router.delete("/ores/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    fail(res, "无效的矿石 ID");
+    return;
+  }
+
+  try {
+    await deleteOre(id);
+    res.json({ success: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete ore");
+    serverError(res, "矿石删除失败，请重试");
   }
 });
 

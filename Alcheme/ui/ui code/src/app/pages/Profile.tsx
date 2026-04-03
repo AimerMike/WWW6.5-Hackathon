@@ -1,15 +1,15 @@
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { X, Award } from 'lucide-react';
-import backgroundImage from 'figma:asset/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
-import radarChart from 'figma:asset/8628d1767a938c32bd29237101e888654b783537.png';
-import collectButton from 'figma:asset/f103e578864ca4d98d1d93e72ca377df8077381a.png';
-import refineButton from 'figma:asset/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
-import awakenButton from 'figma:asset/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
-import profileButton from 'figma:asset/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
-import owlImage from 'figma:asset/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
-import alchemeLogo from 'figma:asset/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
-import characterImage from 'figma:asset/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
+import backgroundImage from '../../assets/72231f1464b340d2245b2bbde298ee0c442dcab7.png';
+import radarChart from '../../assets/8628d1767a938c32bd29237101e888654b783537.png';
+import collectButton from '../../assets/f103e578864ca4d98d1d93e72ca377df8077381a.png';
+import refineButton from '../../assets/bcc24e622f7079ba9837ab4380e8eb2c99b889d1.png';
+import awakenButton from '../../assets/5042fea45ce6ca07d2d6371987ccbdb342fe1d29.png';
+import profileButton from '../../assets/dd0fae2b566b4d9b18684364e779990d3e3e7890.png';
+import owlImage from '../../assets/5dfb73f2e2092eb765b24ba8c1a852ce5f3731e9.png';
+import alchemeLogo from '../../assets/a82dc1e92d5a60168dfc16bfe3402cf3da775301.png';
+import characterImage from '../../assets/bfee606d5dfec7a73890cb51b71e5c43e6c26854.png';
 
 interface Medal {
   id: string;
@@ -52,7 +52,7 @@ export default function Profile() {
     // ==============================
     const loadMedals = async () => {
       try {
-        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/medals");
+        const res = await fetch("/api/medals");
         const data = await res.json();
         setMedals(data.data || []);
       } catch (e) {

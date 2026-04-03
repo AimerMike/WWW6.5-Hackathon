@@ -3,13 +3,13 @@ import { useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 
 // Import crystal images
-import crystal1 from 'figma:asset/6e4310e7eedb7599a8783ae85915384fa1cdb41a.png';
-import crystal2 from 'figma:asset/c9271aa2b5c4b3ac4fd8114695354054ec89c320.png';
-import crystal3 from 'figma:asset/422998f75fa5b2894d6c25e42f9caa86c99f9321.png';
-import crystal4 from 'figma:asset/4a6ca87b1626e3188c8da1e6e3437313330918fd.png';
-import crystal5 from 'figma:asset/4331dd7b68e3e3da6cc1381fab0958d10762790c.png';
-import crystal6 from 'figma:asset/83aeacc4fc141482124734bd80a9fc84f4b2c521.png';
-import crystal7 from 'figma:asset/631bbd517278741d8b4593c3ac1af0dc44681864.png';
+import crystal1 from '../../assets/6e4310e7eedb7599a8783ae85915384fa1cdb41a.png';
+import crystal2 from '../../assets/c9271aa2b5c4b3ac4fd8114695354054ec89c320.png';
+import crystal3 from '../../assets/422998f75fa5b2894d6c25e42f9caa86c99f9321.png';
+import crystal4 from '../../assets/4a6ca87b1626e3188c8da1e6e3437313330918fd.png';
+import crystal5 from '../../assets/4331dd7b68e3e3da6cc1381fab0958d10762790c.png';
+import crystal6 from '../../assets/83aeacc4fc141482124734bd80a9fc84f4b2c521.png';
+import crystal7 from '../../assets/631bbd517278741d8b4593c3ac1af0dc44681864.png';
 
 interface OreItem {
   id: string;
@@ -32,7 +32,7 @@ export default function OreCollection() {
   useEffect(() => {
     const fetchOres = async () => {
       try {
-        const res = await fetch("https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/ores");
+        const res = await fetch("/api/ores");
         const data = await res.json();
         const loadedOres = data.data || [];
         
@@ -78,9 +78,12 @@ export default function OreCollection() {
     try {
       // 批量删除后端已精炼的矿石
       for (const ore of selectedOresDetails) {
-        await fetch(`https://22bcdad4-a6ad-4285-adac-6e7d7e867c52-00-2rkqab45ars9.janeway.replit.dev/api/ores/${ore.id}`, {
-          method: "DELETE"
-        });
+        const oreId = typeof ore.id === 'number' ? ore.id : parseInt(ore.id, 10);
+        if (!isNaN(oreId)) {
+          await fetch(`/api/ores/${oreId}`, {
+            method: "DELETE"
+          });
+        }
       }
     } catch (err) {
       console.log("本地模式删除矿石");

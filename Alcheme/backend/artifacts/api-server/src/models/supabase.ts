@@ -94,6 +94,12 @@ export async function insertOre(values: {
   return assertNoError(data, error, "创建矿石失败");
 }
 
+export async function deleteOre(id: number): Promise<void> {
+  const db = getDb();
+  const { error } = await db.from("ores").delete().eq("id", id);
+  if (error) throw new Error(`删除矿石失败: ${error.message}`);
+}
+
 // ─── Cards（卡片）────────────────────────────────────────────────────────────
 
 export async function getAllCards(): Promise<Card[]> {
@@ -147,6 +153,28 @@ export async function getAllBadges(): Promise<Badge[]> {
   const db = getDb();
   const { data, error } = await db.from("badges").select("*").order("created_at", { ascending: false });
   return assertNoError(data, error, "获取勋章列表失败");
+}
+
+export async function getAllBadgesWithCards(): Promise<Array<{ badge: Badge; cards: Card[]; ores: Ore[] }>> {
+  const db = getDb();
+  const badges = await getAllBadges();
+  const result: Array<{ badge: Badge; cards: Card[]; ores: Ore[] }> = [];
+
+  for (const badge of badges) {
+    const badgeCards = await getBadgeCardsByBadgeId(badge.id);
+    const cardIds = badgeCards.map((bc) => bc.card_id);
+    if (cardIds.length === 0) {
+      result.push({ badge, cards: [], ores: [] });
+      continue;
+    }
+    const cards = await getCardsByIds(cardIds);
+    const cardOres = await getCardOresByCardIds(cardIds);
+    const oreIds = [...new Set(cardOres.map((co) => co.ore_id))];
+    const ores = oreIds.length > 0 ? await getOresByIds(oreIds) : [];
+    result.push({ badge, cards, ores });
+  }
+
+  return result;
 }
 
 export async function getBadgeById(id: number): Promise<Badge | null> {

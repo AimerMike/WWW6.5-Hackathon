@@ -26,7 +26,7 @@ const smeltSchema = z.object({
 router.get("/cards", async (req, res) => {
   try {
     const [cards, cardOres] = await Promise.all([getAllCards(), getAllCardOres()]);
-    res.json(cards.map((card) => formatCard(card, cardOres)));
+    res.json({ data: cards.map((card) => formatCard(card, cardOres)) });
   } catch (err) {
     req.log.error({ err }, "Failed to get cards");
     serverError(res);
