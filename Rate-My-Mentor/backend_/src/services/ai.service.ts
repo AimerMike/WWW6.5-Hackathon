@@ -1,4 +1,4 @@
-import { openaiClient } from '../config/openai';
+import { getOpenAIClient } from '../config/openai';
 
 //service 不自己读 process.env，只消费已经验证过的配置。
 import { getAIEnv } from '../config/env'; //原版：import { env } from '../config/env';

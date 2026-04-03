@@ -8,6 +8,7 @@
 // 把真实评价原文返回给前端
 
 import { DimensionScore, CompanyReputation, ReviewDimension } from '../types/review.types';
+import { IPFSService } from './ipfs.service';
 import { ContractService } from './contract.service';
 //import { IPFSService } from './ipfs.service';
 

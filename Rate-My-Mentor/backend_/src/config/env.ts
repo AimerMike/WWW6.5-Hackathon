@@ -24,9 +24,16 @@ if (!parsedBaseEnv.success) {
 }
 
 /**
- * 仅导出基础启动配置
+ * 导出完整的 env 对象
  */
-export const env = parsedBaseEnv.data;
+export const env = {
+  ...parsedBaseEnv.data,
+  OTP_EXPIRE_MINUTES: process.env.OTP_EXPIRE_MINUTES || '5',
+  EMAIL_USER: process.env.EMAIL_USER || '',
+  OPENAI_MODEL: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+  ENCRYPTION_KEY: process.env.ENCRYPTION_KEY || '',
+  CONTRACT_ADDRESS: process.env.CONTRACT_ADDRESS || ''
+};
 
 /**
  * 工具函数：判断 env 是否缺失
@@ -85,6 +92,17 @@ export function getEnv(key: string, defaultValue: string): string {
   return String(v);
 }
 
+/**
+ * 必选项读取（修复报错：requireEnv 不存在）
+ */
+export function requireEnv(key: keyof typeof env): string {
+  const value = env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+}
+
 /* ------------------------------------------------------------------ */
 /* 各功能模块 schema */
 /* ------------------------------------------------------------------ */
@@ -130,46 +148,27 @@ const encryptionEnvSchema = z.object({
 
 /* ------------------------------------------------------------------ */
 /* 各功能模块导出函数 */
-/* 在真正用到功能时调用，避免无关功能阻塞服务启动 */
 /* ------------------------------------------------------------------ */
 
-/**
- * AI 功能所需环境变量
- */
 export function getAIEnv() {
   return parseFeatureEnv('AI 功能', aiEnvSchema);
 }
 
-/**
- * IPFS 上传功能所需环境变量
- */
 export function getIpfsEnv() {
   return parseFeatureEnv('IPFS 功能', ipfsEnvSchema);
 }
 
-/**
- * 邮件功能所需环境变量
- */
 export function getEmailEnv() {
   return parseFeatureEnv('邮件功能', emailEnvSchema);
 }
 
-/**
- * 链上合约功能所需环境变量
- */
 export function getChainEnv() {
   return parseFeatureEnv('链上功能', chainEnvSchema);
 }
 
-/**
- * 加密功能所需环境变量
- */
 export function getEncryptionEnv() {
   return parseFeatureEnv('加密功能', encryptionEnvSchema);
 }
-
-
-
 //import dotenv from 'dotenv';
 //import { z } from 'zod';
 

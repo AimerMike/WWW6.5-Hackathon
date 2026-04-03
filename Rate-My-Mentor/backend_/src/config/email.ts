@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getEnv, requireEnv } from './env';
+import { getEmailEnv } from './env';
 
 let _emailTransporter: nodemailer.Transporter | null = null;
 
@@ -7,13 +7,7 @@ let _emailTransporter: nodemailer.Transporter | null = null;
 export function getEmailTransporter(): nodemailer.Transporter {
   if (_emailTransporter) return _emailTransporter;
 
-  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS } = requireEnv([
-    'EMAIL_HOST',
-    'EMAIL_USER',
-    'EMAIL_PASS',
-  ] as const);
-
-  const EMAIL_PORT = getEnv('EMAIL_PORT', '465');
+  const { EMAIL_HOST, EMAIL_USER, EMAIL_PASS, EMAIL_PORT } = getEmailEnv();
 
   _emailTransporter = nodemailer.createTransport({
     host: EMAIL_HOST,
@@ -27,6 +21,9 @@ export function getEmailTransporter(): nodemailer.Transporter {
 
   return _emailTransporter;
 }
+
+// 兼容旧代码导入，修复报错：has no exported member 'emailTransporter'
+export const emailTransporter = getEmailTransporter();
 
 //import nodemailer from 'nodemailer';
 //import { env } from './env';

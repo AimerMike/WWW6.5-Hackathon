@@ -1,6 +1,8 @@
 import { createPublicClient, http } from 'viem';
+
 import { avalancheFuji } from 'viem/chains';
 import { requireEnv } from './env';
+
 
 let _publicClient: ReturnType<typeof createPublicClient> | null = null;
 
@@ -8,7 +10,7 @@ let _publicClient: ReturnType<typeof createPublicClient> | null = null;
 export function getPublicClient() {
   if (_publicClient) return _publicClient;
 
-  const { RPC_URL } = requireEnv(['RPC_URL'] as const);
+  const { RPC_URL } = getChainEnv();
   _publicClient = createPublicClient({
     chain: avalancheFuji,
     transport: http(RPC_URL),
@@ -19,7 +21,7 @@ export function getPublicClient() {
 
 // 按需读取合约地址，避免模块加载时因配置缺失直接报错
 export function getContractAddress(): `0x${string}` {
-  const { CONTRACT_ADDRESS } = requireEnv(['CONTRACT_ADDRESS'] as const);
+  const { CONTRACT_ADDRESS } = getChainEnv();
   return CONTRACT_ADDRESS as `0x${string}`;
 }
 

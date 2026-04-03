@@ -92,4 +92,17 @@ export class AuthService {
 
     return JSON.parse(result) as OfferOCRResult;
   }
+
+  // 4. 签发凭证（用于铸造SBT）
+  static async issueCredential(userAddress: string, ocrResult: OfferOCRResult) {
+    // TODO: 实现签名逻辑
+    // 暂时返回模拟数据
+    return {
+      credentialId: `cred-${Date.now()}`,
+      companyId: `company-${ocrResult.companyName}`,
+      credentialHash: '0x' + '0'.repeat(64),
+      expireTime: Math.floor(Date.now() / 1000) + 3600,
+      signature: '0x' + '0'.repeat(130),
+    };
+  }
 }

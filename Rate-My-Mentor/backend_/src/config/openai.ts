@@ -15,10 +15,14 @@ export function getOpenAIClient(): OpenAI {
 
   _openaiClient = new OpenAI({
     apiKey: OPENAI_API_KEY,
+    dangerouslyAllowBrowser: true
   });
 
   return _openaiClient;
 }
+
+// 兼容旧代码导入：openaiClient（修复你项目里的报错）
+export const openaiClient = getOpenAIClient();
 
 
 
