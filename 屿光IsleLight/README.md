@@ -172,6 +172,8 @@ npm run dev
 
 ## 使用指南
 
+网站：[https://semaphore-omega.vercel.app/](https://www-6-5-hackathon-sage.vercel.app/)
+
 ### 第一步：连接钱包
 
 点击右上角 **Connect Wallet** 按钮，使用 MetaMask 连接 Avalanche Fuji 测试网。
