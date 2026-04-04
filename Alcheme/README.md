@@ -61,20 +61,24 @@ To launch the Alcheme Demo locally, follow these steps:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/your-username/alcheme.git
+git clone https://github.com/your-username/Alcheme.git
 
 # 2. Install dependencies
-cd alcheme
+cd Alcheme/frontend
+npm install
+cd Alcheme/backend
 npm install
 
 # 3. Set Environment Variables
-# Create a .env file in the root directory and add your API keys
-echo "OPENAI_API_KEY=your_api_key_here" > .env
+Modify the frontend and backend `.env` files based on your own information
 
 # 4. Start the development server
+cd Alcheme/backend
 npm run dev
-
+cd Alcheme/frontend
+npm run dev
 ```
+
 Open the live demo to begin your alchemy journey:
 [Alcheme Live Demo](https://tux-assist-66534042.figma.site)
 
