@@ -38,6 +38,10 @@ function showScreen(id) {
 }
 
 function goMap() {
+  // 检查成就
+  if (typeof checkAchievements === 'function') {
+    checkAchievements();
+  }
   renderMap();
   showScreen('map');
 }

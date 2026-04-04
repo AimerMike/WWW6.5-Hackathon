@@ -9,7 +9,50 @@ function renderMap() {
   document.getElementById('hud-planets').textContent = done + '/' + PLANETS.length;
 
   const grid = document.getElementById('planets-grid');
+  const gridParent = grid.parentElement;
+
+  // 清空 grid
   grid.innerHTML = '';
+
+  // 移除旧的成就面板（如果存在）
+  const oldPanel = gridParent.querySelector('.achievements-panel');
+  if (oldPanel) {
+    oldPanel.remove();
+  }
+
+  // 添加成就面板（安全检查）
+  if (typeof ACHIEVEMENTS !== 'undefined' && typeof getAchievementProgress === 'function') {
+    try {
+      const progress = getAchievementProgress();
+      const unlockedAchievements = getUnlockedAchievements();
+
+      const achievementsPanel = document.createElement('div');
+      achievementsPanel.className = 'achievements-panel';
+      achievementsPanel.innerHTML = `
+        <div class="achievements-header">
+          <div class="achievements-title">🏆 成就系统</div>
+          <div class="achievements-progress">${progress.unlocked}/${progress.total} (${progress.percentage}%)</div>
+        </div>
+        <div class="achievements-grid">
+          ${ACHIEVEMENTS.map(a => {
+            const unlocked = state.achievements && state.achievements[a.id]?.unlocked;
+            return `
+              <div class="achievement-card ${unlocked ? 'unlocked' : 'locked'}">
+                <div class="achievement-card-icon">${a.icon}</div>
+                <div class="achievement-card-name">${a.name}</div>
+                <div class="achievement-card-desc">${a.description}</div>
+                ${!unlocked ? '<div class="achievement-card-locked">🔒 未解锁</div>' : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+      // 插入到 grid 之前
+      gridParent.insertBefore(achievementsPanel, grid);
+    } catch (e) {
+      console.error('Error rendering achievements:', e);
+    }
+  }
 
   PLANETS.forEach((p, i) => {
     const unlocked = true; // 所有关卡都可以直接进入
@@ -105,6 +148,10 @@ function renderSection(section, idx) {
     case 'pitfalls':  return renderPitfalls(section);
     case 'pipe':      return renderPipe(section);
     case 'quiz':      return renderQuiz(section, idx);
+    case 'challenge': return renderChallenge(section, idx);
+    case 'debug':     return renderDebug(section, idx);
+    case 'sandbox':   return renderSandbox(section, idx);
+    case 'milestone': return renderMilestone(section);
     default: return '';
   }
 }
@@ -251,4 +298,258 @@ function escapeHtml(s) {
 
 function escapeAttr(s) {
   return s.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+}
+
+/* ============================================================
+   NEW INTERACTIVE SECTION TYPES
+   ============================================================ */
+
+// Challenge: 代码挑战
+function renderChallenge(s, idx) {
+  const challengeId = `challenge-${idx}`;
+  return `
+    <div class="challenge-box">
+      <div class="challenge-header">
+        <span class="challenge-icon">🎯</span>
+        <h3>${s.title}</h3>
+      </div>
+      <div class="challenge-task">${s.task}</div>
+
+      <div class="code-editor-wrapper">
+        <div class="editor-toolbar">
+          <span style="color:var(--muted);font-size:.85rem">💻 代码编辑器</span>
+          <button class="btn-small btn-purple" onclick="runChallenge('${challengeId}')">▶ 运行</button>
+        </div>
+        <textarea
+          id="${challengeId}-code"
+          class="code-editor"
+          spellcheck="false"
+        >${s.starter_code || ''}</textarea>
+      </div>
+
+      <div id="${challengeId}-output" class="challenge-output" style="display:none">
+        <div class="output-label">📤 输出结果：</div>
+        <pre id="${challengeId}-result"></pre>
+      </div>
+
+      ${s.hints ? `
+        <div class="challenge-hints">
+          <button class="btn-small btn-ghost" onclick="toggleHints('${challengeId}')">
+            💡 查看提示 (${s.hints.length})
+          </button>
+          <div id="${challengeId}-hints" class="hints-content" style="display:none">
+            ${s.hints.map((h, i) => `<div class="hint-item">提示 ${i+1}: ${h}</div>`).join('')}
+          </div>
+        </div>
+      ` : ''}
+
+      <div id="${challengeId}-feedback" class="challenge-feedback"></div>
+    </div>
+  `;
+}
+
+// Debug: 调试挑战
+function renderDebug(s, idx) {
+  const debugId = `debug-${idx}`;
+  return `
+    <div class="debug-box">
+      <div class="debug-header">
+        <span class="debug-icon">🐛</span>
+        <h3>${s.title}</h3>
+      </div>
+      <div class="debug-scenario">${s.scenario || ''}</div>
+
+      <div class="code-editor-wrapper">
+        <div class="editor-toolbar">
+          <span style="color:var(--red);font-size:.85rem">⚠️ 有 Bug 的代码</span>
+          <span style="color:var(--muted);font-size:.8rem">找出 ${s.bug_count || s.bugs?.length || '所有'} 个 bug</span>
+        </div>
+        <textarea
+          id="${debugId}-code"
+          class="code-editor buggy-code"
+          spellcheck="false"
+        >${s.buggy_code || ''}</textarea>
+      </div>
+
+      ${s.error_log ? `
+        <div class="error-log">
+          <div class="error-label">❌ 错误日志：</div>
+          <pre>${escapeHtml(s.error_log)}</pre>
+        </div>
+      ` : ''}
+
+      <div class="debug-actions">
+        <button class="btn btn-purple" onclick="checkDebug('${debugId}')">🔍 检查修复</button>
+        ${s.hints ? `
+          <button class="btn btn-ghost" onclick="toggleHints('${debugId}')">💡 提示</button>
+        ` : ''}
+      </div>
+
+      ${s.hints ? `
+        <div id="${debugId}-hints" class="hints-content" style="display:none">
+          ${s.hints.map((h, i) => `<div class="hint-item">提示 ${i+1}: ${h}</div>`).join('')}
+        </div>
+      ` : ''}
+
+      <div id="${debugId}-feedback" class="debug-feedback"></div>
+    </div>
+  `;
+}
+
+// Sandbox: 沙盒实验
+function renderSandbox(s, idx) {
+  const sandboxId = `sandbox-${idx}`;
+  return `
+    <div class="sandbox-box">
+      <div class="sandbox-header">
+        <span class="sandbox-icon">🧪</span>
+        <h3>${s.title}</h3>
+      </div>
+      <div class="sandbox-description">${s.description}</div>
+
+      <div class="sandbox-controls">
+        ${s.params ? s.params.map((p, i) => `
+          <div class="param-control">
+            <label for="${sandboxId}-param-${i}">
+              <span class="param-name">${p.name}</span>
+              <span class="param-value" id="${sandboxId}-value-${i}">${p.default}</span>
+            </label>
+            <input
+              type="range"
+              id="${sandboxId}-param-${i}"
+              min="${p.min}"
+              max="${p.max}"
+              step="${p.step || 0.1}"
+              value="${p.default}"
+              oninput="updateSandboxParam('${sandboxId}', ${i}, this.value)"
+            />
+            <div class="param-range">
+              <span>${p.min}</span>
+              <span>${p.max}</span>
+            </div>
+          </div>
+        `).join('') : ''}
+      </div>
+
+      <div class="sandbox-visualization" id="${sandboxId}-viz">
+        <div class="viz-placeholder">
+          📊 调整参数后，这里会显示模拟结果
+        </div>
+      </div>
+
+      ${s.goal ? `
+        <div class="sandbox-goal">
+          🎯 <strong>目标：</strong>${s.goal}
+        </div>
+      ` : ''}
+
+      <div class="sandbox-actions">
+        <button class="btn btn-cyan" onclick="runSandbox('${sandboxId}')">🚀 运行模拟</button>
+        <button class="btn btn-ghost" onclick="resetSandbox('${sandboxId}')">🔄 重置</button>
+      </div>
+
+      <div id="${sandboxId}-result" class="sandbox-result"></div>
+    </div>
+  `;
+}
+
+
+// Milestone: 里程碑总结
+function renderMilestone(s) {
+  const achievementsHtml = s.achievements ? s.achievements.map(a => `
+    <div class="achievement-item">
+      <span class="achievement-icon">${a.icon}</span>
+      <div class="achievement-content">
+        <div class="achievement-title">${a.title}</div>
+        <div class="achievement-desc">${a.description}</div>
+      </div>
+    </div>
+  `).join("") : "";
+
+  const skillsHtml = s.skills ? s.skills.map(skill => `
+    <div class="skill-badge">${skill}</div>
+  `).join("") : "";
+
+  const nextStepsHtml = s.next_steps ? s.next_steps.map((step, i) => `
+    <div class="next-step-item">
+      <span class="step-number">${i + 1}</span>
+      <div class="step-content">${step}</div>
+    </div>
+  `).join("") : "";
+
+  return `
+    <div class="milestone-box">
+      <div class="milestone-header">
+        <div class="milestone-icon">${s.icon || "🏆"}</div>
+        <h2 class="milestone-title">${s.title}</h2>
+        <p class="milestone-subtitle">${s.subtitle || ""}</p>
+      </div>
+
+      ${s.message ? `
+        <div class="milestone-message">
+          ${s.message}
+        </div>
+      ` : ""}
+
+      ${achievementsHtml ? `
+        <div class="milestone-section">
+          <h3 class="section-title">🎯 你已解锁的能力</h3>
+          <div class="achievements-grid">
+            ${achievementsHtml}
+          </div>
+        </div>
+      ` : ""}
+
+      ${skillsHtml ? `
+        <div class="milestone-section">
+          <h3 class="section-title">💪 你现在掌握的技能</h3>
+          <div class="skills-container">
+            ${skillsHtml}
+          </div>
+        </div>
+      ` : ""}
+
+      ${s.project ? `
+        <div class="milestone-section milestone-project">
+          <h3 class="section-title">🚀 里程碑项目</h3>
+          <div class="project-card">
+            <div class="project-header">
+              <span class="project-icon">${s.project.icon || "📦"}</span>
+              <div class="project-title">${s.project.title}</div>
+            </div>
+            <div class="project-desc">${s.project.description}</div>
+            ${s.project.requirements ? `
+              <div class="project-requirements">
+                <strong>要求：</strong>
+                <ul>
+                  ${s.project.requirements.map(r => `<li>${r}</li>`).join("")}
+                </ul>
+              </div>
+            ` : ""}
+            ${s.project.hints ? `
+              <div class="project-hints">
+                <strong>💡 提示：</strong>
+                <ul>
+                  ${s.project.hints.map(h => `<li>${h}</li>`).join("")}
+                </ul>
+              </div>
+            ` : ""}
+          </div>
+        </div>
+      ` : ""}
+
+      ${nextStepsHtml ? `
+        <div class="milestone-section">
+          <h3 class="section-title">🗺️ 下一步建议</h3>
+          <div class="next-steps-list">
+            ${nextStepsHtml}
+          </div>
+        </div>
+      ` : ""}
+
+      <div class="milestone-footer">
+        <button class="btn btn-cyan" onclick="nextSection()">继续冒险 →</button>
+      </div>
+    </div>
+  `;
 }

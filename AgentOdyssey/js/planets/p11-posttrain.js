@@ -12,6 +12,22 @@ PLANETS.push({
     easy: {
       sections: [
         {
+          type: 'concept',
+          title: '💡 关于 P9-P11 的说明',
+          html: `
+            <div style="margin:14px 0;padding:16px;background:rgba(251,191,36,.08);border-left:4px solid var(--yellow);border-radius:10px">
+              <strong style="color:var(--yellow);font-size:1.1rem">💡 可选内容提示</strong><br><br>
+
+              <p style="line-height:1.8;margin:12px 0">
+                P9-P11 是深入 LLM 底层原理的<strong>可选内容</strong>。<br>
+                如果你只想学 Agent 开发，<strong>可以跳过 P9-P11，直接去 P12 实战星</strong>。<br><br>
+
+                跳过不影响后续学习！
+              </p>
+            </div>
+          `
+        },
+        {
           type: 'story',
           html: `
             <div class="speaker">🎓 后训练星</div>
