@@ -115,15 +115,20 @@ async function main() {
   await tx.wait();
   console.log("✅ GardenEnvironment owner → PlantCare");
 
-  // GlobalEcology ownership → PlantCare (or DAO)
-  tx = await globalEcology.transferOwnership(daoAddress);
+  // GlobalEcology ownership → PlantCare (PlantCare needs to call recordCareAction)
+  tx = await globalEcology.transferOwnership(careAddress);
   await tx.wait();
-  console.log("✅ GlobalEcology owner → PlantDAO");
+  console.log("✅ GlobalEcology owner → PlantCare");
 
   // SeasonManager ownership → DAO
   tx = await seasonManager.transferOwnership(daoAddress);
   await tx.wait();
   console.log("✅ SeasonManager owner → PlantDAO");
+
+  // PlantOffspring ownership → PlantCare
+  tx = await plantOffspring.transferOwnership(careAddress);
+  await tx.wait();
+  console.log("✅ PlantOffspring owner → PlantCare");
 
   // PlantDAO 关联合约
   tx = await dao.setContracts(seedAddress, seasonAddress, ecologyAddress, gardenAddress, careAddress);
@@ -135,6 +140,46 @@ async function main() {
   tx = await pleafToken.mintGovernanceReward(deployer.address, hre.ethers.parseEther("100"));
   await tx.wait();
   console.log("✅ 100 $PLEAF → 部署者");
+
+  // ============ 铸造测试植物 NFT ============
+  console.log("\n🌿 铸造测试植物 NFT...");
+
+  // PlantCare 拥有 PlantNFT 的 ownership，通过 PlantCare 铸造
+  const plantCareWithSigner = await hre.ethers.getContractAt("PlantCare", careAddress, deployer);
+
+  // 铸造 3 棵植物给部署者
+  const testPlants = [
+    { species: "绿萝", rarity: 0, effortLevel: 0, tokenURI: "" },      // Common, Easy
+    { species: "月季", rarity: 1, effortLevel: 1, tokenURI: "" },       // Rare, Medium
+    { species: "樱花", rarity: 2, effortLevel: 2, tokenURI: "" },       // Epic, Hard
+  ];
+
+  for (const p of testPlants) {
+    tx = await plantCareWithSigner.mintPlantForUser(p.species, p.rarity, p.effortLevel, p.tokenURI);
+    await tx.wait();
+    console.log(`✅ 铸造植物: ${p.species} (rarity=${p.rarity})`);
+  }
+
+  // ============ 上架一棵植物到市场 ============
+  console.log("\n🛒 上架测试植物到市场...");
+
+  // 先 approve marketplace
+  const plantNFTWithSigner = await hre.ethers.getContractAt("PlantNFT", nftAddress, deployer);
+  tx = await plantNFTWithSigner.approve(marketAddress, 2); // 月季 #2
+  await tx.wait();
+  console.log("✅ approve #2 → marketplace");
+
+  const marketplaceWithSigner = await hre.ethers.getContractAt("PlantMarketplace", marketAddress, deployer);
+  tx = await marketplaceWithSigner.listPlant(2, hre.ethers.parseEther("50"));
+  await tx.wait();
+  console.log("✅ 上架 月季 #2 → 50 $PLEAF");
+
+  // 上架樱花 #3
+  tx = await plantNFTWithSigner.approve(marketAddress, 3);
+  await tx.wait();
+  tx = await marketplaceWithSigner.listPlant(3, hre.ethers.parseEther("120"));
+  await tx.wait();
+  console.log("✅ 上架 樱花 #3 → 120 $PLEAF");
 
   // ============ 完成 ============
   console.log("\n" + "=".repeat(60));
@@ -171,7 +216,11 @@ async function main() {
   };
 
   fs.writeFileSync("deployment.json", JSON.stringify(deployInfo, null, 2));
-  console.log("\n💾 部署信息已保存到 deployment.json");
+  // Also copy to public/ so frontend can fetch it
+  const publicDir = __dirname + "/../public";
+  if (!fs.existsSync(publicDir)) fs.mkdirSync(publicDir, { recursive: true });
+  fs.writeFileSync(publicDir + "/deployment.json", JSON.stringify(deployInfo, null, 2));
+  console.log("\n💾 部署信息已保存到 deployment.json + public/deployment.json");
 }
 
 main()

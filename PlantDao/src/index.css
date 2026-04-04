@@ -197,3 +197,18 @@ body {
   z-index: 0;
   pointer-events: none;
 }
+
+/* Scale-in animation for modals */
+@keyframes scaleIn {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s ease-out;
+}
+
+/* Shadow glow */
+.shadow-glow {
+  box-shadow: 0 0 20px rgba(109, 190, 69, 0.2);
+}

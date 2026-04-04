@@ -61,24 +61,15 @@ contract SeedToken is ERC20, Ownable {
 
     /**
      * @dev 发放奖励（含每日上限检查）
+     * 注意: 金额应在调用前由 PlantCare 计算好（含所有倍率）
      */
     function earnReward(address user, uint256 amount, string memory action) external onlyOwner {
         _resetDailyIfNeeded(user);
-        uint256 adjustedAmount = (amount * ecologyMultiplier) / 100;
-        require(dailyEarned[user] + adjustedAmount <= dailyRewardCap, "Daily reward cap reached");
-        _mint(user, adjustedAmount);
-        totalEarned[user] += adjustedAmount;
-        dailyEarned[user] += adjustedAmount;
-        emit SeedEarned(user, adjustedAmount, action);
-    }
-
-    function _checkDailyCap(address user, uint256 amount) internal view {
-        uint256 today = block.timestamp / 1 days;
-        if (lastRewardDay[user] != today) {
-            // 新的一天，检查会重置
-            return;
-        }
-        require(dailyEarned[user] + (amount * ecologyMultiplier) / 100 <= dailyRewardCap, "Daily reward cap reached");
+        require(dailyEarned[user] + amount <= dailyRewardCap, "Daily reward cap reached");
+        _mint(user, amount);
+        totalEarned[user] += amount;
+        dailyEarned[user] += amount;
+        emit SeedEarned(user, amount, action);
     }
 
     function _resetDailyIfNeeded(address user) internal {

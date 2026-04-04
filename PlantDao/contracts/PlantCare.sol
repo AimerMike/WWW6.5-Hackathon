@@ -97,6 +97,34 @@ contract PlantCare is Ownable {
         plantNFT.updatePlantStats(plantId, newHealth, plant.water, plant.sunlight, plant.soil);
     }
 
+    event PlantMintedForUser(uint256 indexed plantId, address indexed owner, string species);
+
+    /// @notice 允许任何用户铸造一个新的植物 NFT
+    function mintPlantForUser(
+        string calldata species,
+        uint8 rarity,
+        uint8 effortLevel,
+        string calldata tokenURI
+    ) external returns (uint256) {
+        PlantNFT.MintPlantParams memory params = PlantNFT.MintPlantParams({
+            to: msg.sender,
+            species: species,
+            rarity: PlantNFT.Rarity(rarity),
+            effortLevel: PlantNFT.EffortLevel(effortLevel),
+            tokenURI: tokenURI
+        });
+        uint256 tokenId = plantNFT.mintPlant(params);
+
+        // 更新花园环境
+        gardenEnv.recordDailyCare(msg.sender);
+
+        // 更新全局生态
+        globalEcology.recordCareAction();
+
+        emit PlantMintedForUser(tokenId, msg.sender, species);
+        return tokenId;
+    }
+
     function _performCare(uint256 plantId, CareAction action, uint256 quality, uint256 baseReward) internal {
         require(plantNFT.ownerOf(plantId) == msg.sender, "Not the plant owner");
         require(block.timestamp >= lastCareTime[plantId][action] + CARE_COOLDOWN, "Care action on cooldown");
@@ -112,10 +140,14 @@ contract PlantCare is Ownable {
         uint256 gardenBonus = gardenEnv.getGardenBonus(msg.sender);
         reward = (reward * gardenBonus) / 100;
 
+        // 生态倍率加成
+        uint256 ecologyMult = seedToken.ecologyMultiplier();
+        reward = (reward * ecologyMult) / 100;
+
         lastCareTime[plantId][action] = block.timestamp;
         string memory actionName = _actionToString(action);
 
-        // 发放奖励（SeedToken 内部处理每日上限 + 生态倍率）
+        // 发放奖励（SeedToken 内部处理每日上限）
         seedToken.earnReward(msg.sender, reward, actionName);
 
         userTotalCares[msg.sender]++;

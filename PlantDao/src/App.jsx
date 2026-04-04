@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
+import MyPlants from './pages/MyPlants'
 import PlantDetail from './pages/PlantDetail'
 import Marketplace from './pages/Marketplace'
 import Community from './pages/Community'
@@ -11,6 +12,8 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
+        <Route path="/my-plants" element={<MyPlants />} />
+        <Route path="/plant/local/:id" element={<PlantDetail />} />
         <Route path="/plant/:id" element={<PlantDetail />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/community" element={<Community />} />

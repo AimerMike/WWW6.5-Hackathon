@@ -1,5 +1,22 @@
 import { useState } from 'react'
-import { communityPosts, trendingPlants, helpfulUsers } from '../data/mockData'
+
+// 静态社区数据
+const communityPosts = [
+  { id: 1, author: '植物爱好者小王', avatar: '🧑‍🌾', wallet: '0x1a2b...3c4d', time: '30分钟前', content: '我的月季终于开花了！🌸 经过三个月的精心照料，今天早上发现第一个花苞绽放了。', image: '🌹', likes: 42, comments: 8, bookmarked: false, tags: ['#开花记录', '#月季'] },
+  { id: 2, author: '都市园丁', avatar: '👩‍🌿', wallet: '0x5e6f...7g8h', time: '2小时前', content: '分享一个小技巧：用 $SEED 升级植物等级后，护理效率会提升！', image: '📊', likes: 67, comments: 15, bookmarked: true, tags: ['#护理技巧', '#经验分享'] },
+  { id: 3, author: '阳台花园', avatar: '🌻', wallet: '0x9i0j...1k2l', time: '5小时前', content: '今天在市场上用 200 $PLEAF 换到了一棵稀有的樱花树 NFT！🎉', image: '🌸', likes: 89, comments: 23, bookmarked: false, tags: ['#市场交换', '#樱花'] },
+  { id: 4, author: '绿色新手', avatar: '🌱', wallet: '0x3m4n...5o6p', time: '1天前', content: '第一天使用 Plant DAO！领养了一盆多肉宝宝，希望能好好照顾它。🌿', image: '🪴', likes: 35, comments: 12, bookmarked: false, tags: ['#新手报到', '#多肉'] },
+]
+const trendingPlants = [
+  { name: '樱花树', image: '🌸', trend: '+25%' },
+  { name: '兰花', image: '🪻', trend: '+18%' },
+  { name: '薰衣草', image: '💜', trend: '+12%' },
+]
+const helpfulUsers = [
+  { name: '植物大师', avatar: '👨‍🌾', helpfulness: 98 },
+  { name: '绿色-thumb', avatar: '👩‍🌿', helpfulness: 95 },
+  { name: '花匠小陈', avatar: '🧑‍🌾', helpfulness: 91 },
+]
 
 export default function Community() {
   const [posts, setPosts] = useState(communityPosts)
