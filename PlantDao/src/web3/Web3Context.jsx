@@ -3,18 +3,23 @@ import { BrowserProvider, Contract, formatEther, parseEther } from 'ethers'
 
 const Web3Context = createContext(null)
 
-// Contract ABIs (simplified - only needed functions)
+// Contract ABIs - aligned with actual smart contracts
+
 const PLANT_NFT_ABI = [
-  "function mintPlant(string memory species, string memory name, string memory tokenURI) external returns (uint256)",
-  "function getPlantAttributes(uint256 tokenId) external view returns (tuple(string species, string name, uint256 health, uint256 water, uint256 sunlight, uint256 soil, uint256 growthLevel, uint256 birthTime, uint256 lastCareTime, uint256 careStreak, uint256 effortWeight, string effortLabel, uint256 careScore, bool isActive))",
+  "function mintPlant(tuple(address to, string species, uint8 rarity, uint8 effortLevel, string tokenURI) params) external returns (uint256)",
+  "function getPlantAttributes(uint256 tokenId) external view returns (tuple(string species, uint8 rarity, uint8 effortLevel, uint256 effortWeight, uint256 growthLevel, uint256 maxGrowth, uint256 health, uint256 water, uint256 sunlight, uint256 soil, uint256 lastCareTime, uint256 careStreak))",
   "function ownerOf(uint256 tokenId) external view returns (address)",
   "function balanceOf(address owner) external view returns (uint256)",
-  "function tokenOfOwnerByIndex(address owner, uint256 index) external view returns (uint256)",
   "function totalSupply() external view returns (uint256)",
+  "function tokenURI(uint256 tokenId) external view returns (string memory)",
   "function growPlant(uint256 tokenId) external",
   "function updatePlantStats(uint256 tokenId, uint256 health, uint256 water, uint256 sunlight, uint256 soil) external",
   "function incrementCareStreak(uint256 tokenId) external",
-  "function getEffortWeight(uint256 tokenId) external view returns (uint256)"
+  "function getEffortWeight(uint256 tokenId) external view returns (uint256)",
+  "function getTotalPlants() external view returns (uint256)",
+  "function transferFrom(address from, address to, uint256 tokenId) external",
+  "function approve(address to, uint256 tokenId) external",
+  "function transferOwnership(address newOwner) external",
 ]
 
 const SEED_TOKEN_ABI = [
@@ -30,14 +35,22 @@ const SEED_TOKEN_ABI = [
   "function PHOTO_REWARD() external view returns (uint256)",
   "function MEDICINE_REWARD() external view returns (uint256)",
   "function CONVERSION_RATE() external view returns (uint256)",
-  "function dailyRewardCap() external view returns (uint256)"
+  "function dailyRewardCap() external view returns (uint256)",
+  "function ecologyMultiplier() external view returns (uint256)",
+  "function setEcologyMultiplier(uint256 multiplier) external",
+  "function setDailyRewardCap(uint256 cap) external",
+  "function setPleafToken(address _pleafToken) external",
+  "function transferOwnership(address newOwner) external",
 ]
 
 const PLEAF_TOKEN_ABI = [
   "function balanceOf(address account) external view returns (uint256)",
   "function mintGovernanceReward(address to, uint256 amount) external",
   "function getVotingPower(address account) external view returns (uint256)",
-  "function setSeedToken(address seedToken) external"
+  "function setSeedToken(address seedToken) external",
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function transferFrom(address from, address to, uint256 amount) external returns (bool)",
+  "function transferOwnership(address newOwner) external",
 ]
 
 const PLANT_CARE_ABI = [
@@ -46,9 +59,13 @@ const PLANT_CARE_ABI = [
   "function repot(uint256 plantId, uint256 quality) external",
   "function takePhoto(uint256 plantId, uint256 quality) external",
   "function applyMedicine(uint256 plantId, uint256 quality) external",
+  "function mintPlantForUser(string species, uint8 rarity, uint8 effortLevel, string tokenURI) external returns (uint256)",
   "function canPerformCare(uint256 plantId, uint8 action) external view returns (bool)",
   "function userTotalCares(address user) external view returns (uint256)",
-  "function CARE_COOLDOWN() external view returns (uint256)"
+  "function userStreak(address user) external view returns (uint256)",
+  "function CARE_COOLDOWN() external view returns (uint256)",
+  "function getCareHistoryLength() external view returns (uint256)",
+  "function getCareRecord(uint256 index) external view returns (tuple(address caregiver, uint256 plantId, uint8 action, uint256 timestamp, uint256 reward, uint256 quality))",
 ]
 
 const SEASON_MANAGER_ABI = [
@@ -56,19 +73,21 @@ const SEASON_MANAGER_ABI = [
   "function getSeasonEffects() external view returns (tuple(uint256 growthMultiplier, uint256 waterConsumption, uint256 breedBonus, uint256 diseaseRisk, uint256 seedRewardMultiplier))",
   "function getActiveDiseases() external view returns (uint256[] memory)",
   "function getDisease(uint256 id) external view returns (tuple(string name, uint8 peakSeason, uint256 triggerThreshold, uint256 healthImpact, uint256 spreadFactor, bool isActive))",
-  "function getDiseaseCount() external view returns (uint256)"
+  "function getDiseaseCount() external view returns (uint256)",
 ]
 
 const GLOBAL_ECOLOGY_ABI = [
   "function ecologyIndex() external view returns (uint256)",
   "function getEcologyState() external view returns (uint8)",
   "function getCurrentMultiplier() external view returns (uint256)",
-  "function getEcologyStats() external view returns (uint256 index, uint8 state, uint256 plants, uint256 healthy, uint256 dead, uint256 cares, uint256 breeds, uint256 diseased)"
+  "function getEcologyStats() external view returns (uint256 index, uint8 state, uint256 plants, uint256 healthy, uint256 dead, uint256 cares, uint256 breeds, uint256 diseased)",
+  "function recalculateIndex() external",
 ]
 
 const GARDEN_ENV_ABI = [
   "function getGardenInfo(address user) external view returns (uint256 plantCount, uint256 avgHealth, uint256 consecutiveDays, uint256 bonusPercentage, uint8 state)",
-  "function getGardenBonus(address user) external view returns (uint256)"
+  "function getGardenBonus(address user) external view returns (uint256)",
+  "function getGardenState(address user) external view returns (uint8)",
 ]
 
 const PLANT_DAO_ABI = [
@@ -78,16 +97,31 @@ const PLANT_DAO_ABI = [
   "function getProposalInfo(uint256 proposalId) external view returns (string title, string description, address proposer, uint8 category, uint256 createdTime, uint256 votingDeadline, uint256 votesFor, uint256 votesAgainst, uint8 state)",
   "function proposalCount() external view returns (uint256)",
   "function hasVoted(uint256 proposalId, address voter) external view returns (bool)",
-  "function getVotingPower(address account) external view returns (uint256)"
+  "function getVotingPower(address account) external view returns (uint256)",
+  "function setContracts(address _seed, address _season, address _ecology, address _garden, address _care) external",
 ]
 
 const MARKETPLACE_ABI = [
-  "function listItem(uint256 tokenId, uint256 price) external",
-  "function buyItem(uint256 listingId) external",
-  "function cancelListing(uint256 listingId) external",
-  "function getListings() external view returns (uint256[] memory)",
-  "function getListing(uint256 listingId) external view returns (tuple(uint256 tokenId, address seller, uint256 price, bool active, uint256 listedTime))",
-  "function listingCount() external view returns (uint256)"
+  "function listPlant(uint256 plantId, uint256 price) external",
+  "function buyPlant(uint256 listingIndex) external",
+  "function cancelListing(uint256 listingIndex) external",
+  "function getActiveListings() external view returns (tuple(uint256 plantId, address seller, uint256 price, bool active, uint256 listedTime)[] memory)",
+  "function getListingCount() external view returns (uint256)",
+  "function listings(uint256 index) external view returns (uint256 plantId, address seller, uint256 price, bool active, uint256 listedTime)",
+]
+
+const PLANT_OFFSPRING_ABI = [
+  "function mintOffspring(tuple(address to, uint256 parentTokenId, uint256 parentOffspringId, uint8 method, uint256 parentCareScore, uint256 generation, string species, string tokenURI) params) external returns (uint256)",
+  "function getOffspringAttributes(uint256 tokenId) external view returns (tuple(uint256 parentTokenId, uint256 parentOffspringId, uint8 method, uint256 generation, uint256 careScore, uint256 inheritedScore, string species, uint8 rarity, uint256 health, uint256 water, uint256 sunlight, uint256 soil, uint256 growthLevel, uint256 birthTime, uint256 lastCareTime, bool isActive))",
+  "function getOffspringOf(uint256 parentId) external view returns (uint256[] memory)",
+  "function canBreed(uint256 parentTokenId) external view returns (bool)",
+  "function getTotalOffspring() external view returns (uint256)",
+  "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function updateOffspringStats(uint256 offspringId, uint256 health, uint256 water, uint256 sunlight, uint256 soil) external",
+  "function updateCareScore(uint256 offspringId, uint256 newScore) external",
+  "function growOffspring(uint256 offspringId) external",
+  "function recordBreedTime(uint256 parentTokenId) external",
+  "function transferOwnership(address newOwner) external",
 ]
 
 // Default contract addresses (localhost hardhat)
@@ -112,6 +146,20 @@ export function Web3Provider({ children }) {
   const [chainId, setChainId] = useState(null)
   const [connecting, setConnecting] = useState(false)
   const [addresses, setAddresses] = useState(DEFAULT_ADDRESSES)
+
+  // Try to load addresses from deployment.json on mount
+  useEffect(() => {
+    fetch('/deployment.json')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.contracts) {
+          setAddresses(prev => ({ ...prev, ...data.contracts }))
+        }
+      })
+      .catch(() => {
+        // Use default addresses
+      })
+  }, [])
 
   const connectWallet = useCallback(async () => {
     if (!window.ethereum) {
@@ -141,6 +189,7 @@ export function Web3Provider({ children }) {
         globalEcology: new Contract(addresses.GlobalEcology, GLOBAL_ECOLOGY_ABI, sign),
         gardenEnv: new Contract(addresses.GardenEnvironment, GARDEN_ENV_ABI, sign),
         marketplace: new Contract(addresses.PlantMarketplace, MARKETPLACE_ABI, sign),
+        plantOffspring: new Contract(addresses.PlantOffspring, PLANT_OFFSPRING_ABI, sign),
       }
       setContracts(contractInstances)
       return true

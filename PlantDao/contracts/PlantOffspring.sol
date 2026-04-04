@@ -57,58 +57,66 @@ contract PlantOffspring is ERC721, ERC721URIStorage, Ownable {
         _nextTokenId = 1;
     }
 
-    function mintOffspring(
-        address to,
-        uint256 parentTokenId,
-        uint256 parentOffspringId,
-        ReproductionMethod method,
-        uint256 parentCareScore,
-        uint256 generation,
-        string memory species,
-        string memory _tokenURI
-    ) external onlyOwner returns (uint256) {
+    struct MintParams {
+        address to;
+        uint256 parentTokenId;
+        uint256 parentOffspringId;
+        ReproductionMethod method;
+        uint256 parentCareScore;
+        uint256 generation;
+        string species;
+        string tokenURI;
+    }
+
+    function mintOffspring(MintParams calldata params) external onlyOwner returns (uint256) {
         uint256 tokenId = _nextTokenId++;
 
-        // 计算继承评分
+        uint256 inheritedScore = _calcInheritedScore(params.method, params.parentCareScore);
+        Rarity rarity = _calcRarity(inheritedScore);
+
+        _createOffspring(tokenId, params, inheritedScore, rarity);
+        parentToOffspring[params.parentTokenId].push(tokenId);
+
+        _safeMint(params.to, tokenId);
+        _setTokenURI(tokenId, params.tokenURI);
+
+        emit OffspringMinted(tokenId, params.parentTokenId, params.method, params.to);
+        return tokenId;
+    }
+
+    function _calcInheritedScore(ReproductionMethod method, uint256 parentCareScore) internal view returns (uint256) {
         uint256 inheritRate;
         if (method == ReproductionMethod.Cutting) inheritRate = cuttingInherit;
         else if (method == ReproductionMethod.Division) inheritRate = divisionInherit;
         else inheritRate = seedInherit;
+        return (parentCareScore * inheritRate) / 100;
+    }
 
-        uint256 inheritedScore = (parentCareScore * inheritRate) / 100;
+    function _calcRarity(uint256 inheritedScore) internal pure returns (Rarity) {
+        if (inheritedScore >= 90) return Rarity.Legendary;
+        if (inheritedScore >= 75) return Rarity.Epic;
+        if (inheritedScore >= 50) return Rarity.Rare;
+        return Rarity.Common;
+    }
 
-        // 确定稀有度（基于继承评分）
-        Rarity rarity = Rarity.Common;
-        if (inheritedScore >= 90) rarity = Rarity.Legendary;
-        else if (inheritedScore >= 75) rarity = Rarity.Epic;
-        else if (inheritedScore >= 50) rarity = Rarity.Rare;
-
-        offspringAttributes[tokenId] = OffspringAttributes({
-            parentTokenId: parentTokenId,
-            parentOffspringId: parentOffspringId,
-            method: method,
-            generation: generation,
-            careScore: inheritedScore,
-            inheritedScore: inheritedScore,
-            species: species,
-            rarity: rarity,
-            health: 70,
-            water: 60,
-            sunlight: 60,
-            soil: 60,
-            growthLevel: 1,
-            birthTime: block.timestamp,
-            lastCareTime: block.timestamp,
-            isActive: true
-        });
-
-        parentToOffspring[parentTokenId].push(tokenId);
-
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, _tokenURI);
-
-        emit OffspringMinted(tokenId, parentTokenId, method, to);
-        return tokenId;
+    function _createOffspring(uint256 tokenId, MintParams calldata params, uint256 inheritedScore, Rarity rarity) internal {
+        OffspringAttributes storage o = offspringAttributes[tokenId];
+        o.parentTokenId = params.parentTokenId;
+        o.parentOffspringId = params.parentOffspringId;
+        o.method = params.method;
+        o.generation = params.generation;
+        o.careScore = inheritedScore;
+        o.inheritedScore = inheritedScore;
+        o.species = params.species;
+        o.rarity = rarity;
+        o.health = 70;
+        o.water = 60;
+        o.sunlight = 60;
+        o.soil = 60;
+        o.growthLevel = 1;
+        o.birthTime = block.timestamp;
+        o.lastCareTime = block.timestamp;
+        o.isActive = true;
     }
 
     function updateCareScore(uint256 offspringId, uint256 newScore) external onlyOwner {

@@ -16,9 +16,11 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Environment
+# Environment & Secrets
 .env
 .env.local
+.env.*.local
+deployment.json
 
 # Logs
 *.log

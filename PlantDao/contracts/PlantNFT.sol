@@ -40,36 +40,41 @@ contract PlantNFT is ERC721, ERC721URIStorage, Ownable {
         _nextTokenId = 1;
     }
 
-    function mintPlant(
-        address to,
-        string memory species,
-        Rarity rarity,
-        EffortLevel effortLevel,
-        string memory _tokenURI
-    ) external onlyOwner returns (uint256) {
+    struct MintPlantParams {
+        address to;
+        string species;
+        Rarity rarity;
+        EffortLevel effortLevel;
+        string tokenURI;
+    }
+
+    function mintPlant(MintPlantParams calldata params) external onlyOwner returns (uint256) {
         uint256 tokenId = _nextTokenId++;
-        uint256 weight = _getEffortWeight(rarity);
+        uint256 weight = _getEffortWeight(params.rarity);
 
-        plantAttributes[tokenId] = PlantAttributes({
-            species: species,
-            rarity: rarity,
-            effortLevel: effortLevel,
-            effortWeight: weight,
-            growthLevel: 1,
-            maxGrowth: 20,
-            health: 80,
-            water: 70,
-            sunlight: 70,
-            soil: 70,
-            lastCareTime: block.timestamp,
-            careStreak: 0
-        });
+        _initPlant(tokenId, params, weight);
 
-        _safeMint(to, tokenId);
-        _setTokenURI(tokenId, _tokenURI);
+        _safeMint(params.to, tokenId);
+        _setTokenURI(tokenId, params.tokenURI);
 
-        emit PlantMinted(tokenId, to, species, rarity);
+        emit PlantMinted(tokenId, params.to, params.species, params.rarity);
         return tokenId;
+    }
+
+    function _initPlant(uint256 tokenId, MintPlantParams calldata params, uint256 weight) internal {
+        PlantAttributes storage p = plantAttributes[tokenId];
+        p.species = params.species;
+        p.rarity = params.rarity;
+        p.effortLevel = params.effortLevel;
+        p.effortWeight = weight;
+        p.growthLevel = 1;
+        p.maxGrowth = 20;
+        p.health = 80;
+        p.water = 70;
+        p.sunlight = 70;
+        p.soil = 70;
+        p.lastCareTime = block.timestamp;
+        p.careStreak = 0;
     }
 
     function updatePlantStats(
@@ -119,11 +124,11 @@ contract PlantNFT is ERC721, ERC721URIStorage, Ownable {
     }
 
     function _getEffortWeight(Rarity rarity) internal pure returns (uint256) {
-        if (rarity == Rarity.Common) return 1;
-        if (rarity == Rarity.Rare) return 15;
-        if (rarity == Rarity.Epic) return 2;
-        if (rarity == Rarity.Legendary) return 3;
-        return 1;
+        if (rarity == Rarity.Common) return 100;
+        if (rarity == Rarity.Rare) return 150;
+        if (rarity == Rarity.Epic) return 200;
+        if (rarity == Rarity.Legendary) return 300;
+        return 100;
     }
 
     function _clamp(uint256 value, uint256 min_val, uint256 max_val) internal pure returns (uint256) {
