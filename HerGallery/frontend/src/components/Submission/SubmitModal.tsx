@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { X, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { uploadFileToIPFS, uploadToIPFS } from '@/services/ipfs';
+import { uploadFileToIPFS } from '@/services/ipfs';
 
 const CONTENT_TYPES = [
   { value: 'evidence', label: '存证', icon: '🧾' },
@@ -13,7 +13,7 @@ interface Props {
   exhibitionId: number;
   onClose: () => void;
   onSuccess: () => void;
-  onSubmit: (data: { contentType: string; contentHash: string; title: string; description: string }) => void;
+  onSubmit: (data: { contentType: string; content: string; title: string; description: string }) => void;
   isLoading: boolean;
 }
 
@@ -42,33 +42,48 @@ const SubmitModal = ({ exhibitionId, onClose, onSubmit, isLoading }: Props) => {
       toast.error('请输入标题');
       return;
     }
+    if (title.length > 100) {
+      toast.error('标题不能超过 100 字');
+      return;
+    }
     if (!description.trim()) {
       toast.error('请输入说明');
+      return;
+    }
+    if (description.length > 500) {
+      toast.error('说明不能超过 500 字');
       return;
     }
     if (!textContent.trim() && !imageFile && !link.trim()) {
       toast.error('请至少填写文字、上传图片或提供链接中的一项');
       return;
     }
+    if (textContent.length > 3000) {
+      toast.error('内容文字不能超过 3000 字');
+      return;
+    }
 
     setIsUploading(true);
-    toast.info('正在上传到 IPFS...');
+    if (imageFile) {
+      toast.info('正在上传图片到 IPFS...');
+    }
 
     try {
       const imageHash = imageFile ? await uploadFileToIPFS(imageFile) : '';
-      const payload = {
-        type: contentType,
-        text: textContent.trim() || undefined,
-        imageHash: imageHash || undefined,
-        link: link.trim() || undefined,
-      };
 
-      const finalContentHash = await uploadToIPFS(payload);
+      // Store content as JSON string on-chain (only image is on IPFS)
+      const content = JSON.stringify({
+        text: textContent.trim() || '',
+        link: link.trim() || '',
+        imageHash: imageHash || '',
+      });
 
-      toast.success('上传成功！');
+      if (imageFile) {
+        toast.success('上传成功！');
+      }
       onSubmit({
         contentType,
-        contentHash: finalContentHash,
+        content,
         title: title.trim(),
         description: description.trim(),
       });
@@ -116,26 +131,40 @@ const SubmitModal = ({ exhibitionId, onClose, onSubmit, isLoading }: Props) => {
           {/* Title */}
           <div className="mb-4">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
-              标题 <span className="text-xs text-muted-foreground">({title.length}/50)</span>
+              标题
+              <span className={`ml-2 text-xs font-normal ${title.length > 100 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {title.length} / 100 字
+              </span>
             </label>
             <input
               value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, 50))}
+              onChange={(e) => setTitle(e.target.value)}
               placeholder="给你的作品起个名字"
-              className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+              className={`w-full rounded-xl border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-1 transition-all ${
+                title.length > 100
+                  ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                  : 'border-input focus:border-primary focus:ring-primary/20'
+              }`}
             />
           </div>
 
           <div className="mb-4">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               {contentType === 'evidence' ? '存证内容' : '创作内容'}
+              <span className={`ml-2 text-xs font-normal ${textContent.length > 3000 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {textContent.length} / 3000 字
+              </span>
             </label>
             <textarea
               value={textContent}
               onChange={(e) => setTextContent(e.target.value)}
               placeholder={contentType === 'evidence' ? '描述你要存证的内容...' : '写下你的创作文字或说明...'}
               rows={4}
-              className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all resize-none"
+              className={`w-full rounded-xl border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-1 transition-all resize-none ${
+                textContent.length > 3000
+                  ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                  : 'border-input focus:border-primary focus:ring-primary/20'
+              }`}
             />
           </div>
 
@@ -193,14 +222,21 @@ const SubmitModal = ({ exhibitionId, onClose, onSubmit, isLoading }: Props) => {
           {/* Description */}
           <div className="mb-6">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
-              说明 <span className="text-xs text-muted-foreground">({description.length}/200)</span>
+              说明
+              <span className={`ml-2 text-xs font-normal ${description.length > 500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                {description.length} / 500 字
+              </span>
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, 200))}
+              onChange={(e) => setDescription(e.target.value)}
               placeholder="简单描述一下你的作品..."
               rows={3}
-              className="w-full rounded-xl border border-input bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all resize-none"
+              className={`w-full rounded-xl border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-1 transition-all resize-none ${
+                description.length > 500
+                  ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                  : 'border-input focus:border-primary focus:ring-primary/20'
+              }`}
             />
           </div>
 

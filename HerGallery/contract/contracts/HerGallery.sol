@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.22;
 
-contract HerGallery {
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+
+contract HerGallery is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     enum SubmissionStatus {
         PENDING,
         APPROVED,
@@ -12,7 +16,7 @@ contract HerGallery {
         uint256 id;
         address curator;
         string title;
-        string contentHash;
+        string content;
         string coverHash;
         string[] tags;
         uint256 createdAt;
@@ -28,7 +32,7 @@ contract HerGallery {
         address creator;
         string contentType;
         SubmissionStatus status;
-        string contentHash;
+        string content;
         string title;
         string description;
         uint256 createdAt;
@@ -40,7 +44,6 @@ contract HerGallery {
     uint256 public constant CREATION_FEE = 0.001 ether;
     uint256 public constant MIN_SUBMISSIONS_FOR_STAKE_WITHDRAWAL = 10;
 
-    address public immutable owner;
     uint256 public platformTipPool;
 
     Exhibition[] private exhibitions;
@@ -52,6 +55,7 @@ contract HerGallery {
     mapping(address => bool) public hasSubmitted;
     mapping(address => string) public usernames;
     mapping(address => bool) public hasSetUsername;
+    mapping(address => bool) public hasCreatedExhibition;
 
     event ExhibitionCreated(uint256 indexed id, string title, address indexed curator);
     event SubmissionCreated(uint256 indexed id, uint256 indexed exhibitionId, address indexed creator);
@@ -65,12 +69,17 @@ contract HerGallery {
     event TipReceived(address indexed sender, uint256 indexed exhibitionId, uint256 amount, bool isPlatformTip);
     event TipsWithdrawn(uint256 indexed exhibitionId, address indexed curator, uint256 amount);
     event FirstSubmission(address indexed user, uint256 submissionId);
+    event FirstExhibition(address indexed curator, uint256 exhibitionId);
     event RecommendMilestone(address indexed creator, uint256 submissionId, uint256 recommendCount);
     event UsernameSet(address indexed user, string username);
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner");
-        _;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
     }
 
     modifier exhibitionExists(uint256 exhibitionId) {
@@ -83,9 +92,7 @@ contract HerGallery {
         _;
     }
 
-    constructor() {
-        owner = msg.sender;
-    }
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function setUsername(string memory username) external {
         bytes memory usernameBytes = bytes(username);
@@ -100,12 +107,12 @@ contract HerGallery {
 
     function createExhibition(
         string memory title,
-        string memory contentHash,
+        string memory content,
         string memory coverHash,
         string[] memory tags
     ) external payable {
-        require(bytes(title).length > 0 && bytes(title).length <= 50, "Invalid title length");
-        require(bytes(contentHash).length > 0, "Content hash required");
+        require(bytes(title).length > 0 && bytes(title).length <= 200, "Invalid title length");
+        require(bytes(content).length > 0 && bytes(content).length <= 15000, "Content required");
         require(msg.value >= CREATION_FEE, "Insufficient creation fee");
         require(tags.length <= 3, "Too many tags");
 
@@ -116,7 +123,7 @@ contract HerGallery {
         exhibition.id = exhibitionId;
         exhibition.curator = msg.sender;
         exhibition.title = title;
-        exhibition.contentHash = contentHash;
+        exhibition.content = content;
         exhibition.coverHash = coverHash;
         exhibition.createdAt = block.timestamp;
 
@@ -125,6 +132,11 @@ contract HerGallery {
         }
 
         emit ExhibitionCreated(exhibitionId, title, msg.sender);
+
+        if (!hasCreatedExhibition[msg.sender]) {
+            hasCreatedExhibition[msg.sender] = true;
+            emit FirstExhibition(msg.sender, exhibitionId);
+        }
     }
 
     function getExhibition(uint256 exhibitionId) external view exhibitionExists(exhibitionId) returns (Exhibition memory) {
@@ -138,15 +150,16 @@ contract HerGallery {
     function submitToExhibition(
         uint256 exhibitionId,
         string memory contentType,
-        string memory contentHash,
+        string memory content,
         string memory title,
         string memory description
     ) external exhibitionExists(exhibitionId) {
         Exhibition storage exhibition = exhibitions[exhibitionId];
         require(!exhibition.flagged, "Exhibition flagged");
         require(_isValidContentType(contentType), "Invalid content type");
-        require(bytes(contentHash).length > 0, "Content hash required");
-        require(bytes(title).length > 0 && bytes(title).length <= 50, "Invalid title length");
+        require(bytes(content).length > 0 && bytes(content).length <= 10000, "Content required");
+        require(bytes(title).length > 0 && bytes(title).length <= 300, "Invalid title length");
+        require(bytes(description).length <= 1500, "Description too long");
 
         uint256 submissionId = submissions.length;
         submissions.push(
@@ -156,7 +169,7 @@ contract HerGallery {
                 creator: msg.sender,
                 contentType: contentType,
                 status: SubmissionStatus.PENDING,
-                contentHash: contentHash,
+                content: content,
                 title: title,
                 description: description,
                 createdAt: block.timestamp,

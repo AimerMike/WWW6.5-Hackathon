@@ -4,26 +4,53 @@ import { useAccount } from 'wagmi';
 import { Upload, X, Loader2 } from 'lucide-react';
 import Layout from '@/components/Layout/Layout';
 import { toast } from 'sonner';
-import { useCreateExhibition, useCreationFee } from '@/hooks/useContract';
-import { uploadFileToIPFS, uploadToIPFS } from '@/services/ipfs';
+import { useCreateExhibition, useCreationFee, useHasCreatedExhibition } from '@/hooks/useContract';
+import { uploadFileToIPFS } from '@/services/ipfs';
+import { usePOAP } from '@/context/POAPContext';
+import ReactMarkdown from 'react-markdown';
 
 const CreateExhibitionPage = () => {
   const navigate = useNavigate();
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const { data: fee } = useCreationFee();
+  const { triggerFirstExhibition } = usePOAP();
+  const { data: hasCreatedExhibitionBefore } = useHasCreatedExhibition(address || '');
   const { createExhibition } = useCreateExhibition(() => {
     toast.success('展厅创建成功！');
-    navigate('/');
+    if (!hasCreatedExhibitionBefore) {
+      triggerFirstExhibition();
+    }
+    navigate('/gallery');
   });
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [tagsInput, setTagsInput] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [previewMode, setPreviewMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  const AVAILABLE_TAGS = [
+    '网络帖子',
+    '维权',
+    '消费',
+    '公共安全',
+    '12315',
+    '母婴',
+    '健康',
+    '觉醒',
+    '诗歌',
+    '艺术',
+    '天空',
+    '景色',
+    '历史',
+    '母系',
+    '自然',
+    '女性联结',
+    '云吃吃',
+  ];
 
   const creationFee = fee ? Number(fee) / 1e18 : 0.001;
 
@@ -57,25 +84,18 @@ const CreateExhibitionPage = () => {
       toast.error('请输入主题介绍');
       return;
     }
+    if (content.length > 5000) {
+      toast.error('主题介绍不能超过 5000 字');
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      const tags = tagsInput
-        .split(/[，,]/)
-        .map((tag) => tag.trim())
-        .filter(Boolean)
-        .slice(0, 3);
+      const tags = selectedTags.slice(0, 3);
       let coverHash = '';
-      let contentHash = '';
 
-      // Upload cover to IPFS if present
       setIsUploading(true);
-      toast.info('正在上传展厅内容到 IPFS...');
-
-      contentHash = await uploadToIPFS({
-        markdown: content.trim(),
-      });
 
       if (coverFile) {
         toast.info('正在上传封面到 IPFS...');
@@ -94,7 +114,7 @@ const CreateExhibitionPage = () => {
 
       await createExhibition({
         title: title.trim(),
-        contentHash,
+        content: content.trim(),
         coverHash,
         tags,
       });
@@ -163,20 +183,46 @@ const CreateExhibitionPage = () => {
 
           <div className="mb-6">
             <label className="mb-1.5 block text-sm font-medium text-foreground">
-              标签 <span className="text-xs text-muted-foreground">最多 3 个，用逗号分隔</span>
+              标签 <span className="text-xs text-muted-foreground">最多 3 个</span>
             </label>
-            <input
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="证言记录, 历史档案, 二创作品"
-              className="w-full rounded-xl border border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
-            />
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag);
+                const isDisabled = !isSelected && selectedTags.length >= 3;
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedTags(selectedTags.filter((t) => t !== tag));
+                      } else if (selectedTags.length < 3) {
+                        setSelectedTags([...selectedTags, tag]);
+                      }
+                    }}
+                    disabled={isDisabled}
+                    className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-secondary text-muted-foreground hover:bg-primary/20 hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Markdown Editor */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-sm font-medium text-foreground">主题介绍</label>
+              <label className="text-sm font-medium text-foreground">
+                主题介绍
+                <span className={`ml-2 text-xs font-normal ${content.length > 5000 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {content.length} / 5000 字
+                </span>
+              </label>
               <div className="flex rounded-lg border border-border overflow-hidden text-xs">
                 <button
                   onClick={() => setPreviewMode(false)}
@@ -203,11 +249,21 @@ const CreateExhibitionPage = () => {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="使用 Markdown 格式编写展厅主题介绍..."
                 rows={10}
-                className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all resize-none font-mono"
+                className={`w-full rounded-xl border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none focus:ring-1 transition-all resize-none font-mono ${
+                  content.length > 5000
+                    ? 'border-destructive focus:border-destructive focus:ring-destructive/20'
+                    : 'border-input focus:border-primary focus:ring-primary/20'
+                }`}
               />
             ) : (
               <div className="min-h-[240px] rounded-xl border border-border bg-card p-4 text-sm text-foreground leading-relaxed">
-                {content || <span className="text-muted-foreground">暂无内容</span>}
+                {content ? (
+                  <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown>{content}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">暂无内容</span>
+                )}
               </div>
             )}
           </div>

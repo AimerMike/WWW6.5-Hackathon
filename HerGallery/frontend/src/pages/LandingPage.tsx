@@ -4,9 +4,11 @@ import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Header from '@/components/Layout/Header';
 import Footer from '@/components/Layout/Footer';
-import { fetchHomeExhibitions, type HomeExhibitionRecord } from '@/hooks/useContract';
+import { fetchHomeExhibitions, type HomeExhibitionRecord, useTipPlatform } from '@/hooks/useContract';
 import { getAllIPFSUrls } from '@/services/ipfs';
 import { shortenAddress } from '@/lib/format';
+import { useAccount } from 'wagmi';
+import { toast } from 'sonner';
 
 // ── Animated background orb ──────────────────────────────────────────────────
 
@@ -197,6 +199,86 @@ const TECH = [
   { icon: '🎨', name: 'Tailwind + Framer', desc: '流畅动效与精致视觉系统' },
 ];
 
+// ── Tip platform section ──────────────────────────────────────────────────────
+
+function TipPlatformSection() {
+  const { isConnected } = useAccount();
+  const [amount, setAmount] = useState('0.01');
+  const [isTipping, setIsTipping] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const { tipPlatform } = useTipPlatform(() => {
+    setDone(true);
+    toast.success('感谢你的支持！打赏已上链 ✦');
+    setTimeout(() => setDone(false), 4000);
+  });
+
+  const handleTip = async () => {
+    if (!isConnected) { toast.error('请先连接钱包'); return; }
+    const val = Number(amount);
+    if (!amount || val <= 0) { toast.error('请输入有效金额'); return; }
+    setIsTipping(true);
+    try {
+      await tipPlatform(amount);
+    } catch (err: any) {
+      toast.error(err.message || '打赏失败，请重试');
+    } finally {
+      setIsTipping(false);
+    }
+  };
+
+  return (
+    <section className="gallery-container pb-20 pt-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="mx-auto max-w-md rounded-3xl border border-violet-200/20 bg-gradient-to-br from-violet-950/40 via-purple-900/30 to-fuchsia-950/40 px-8 py-10 text-center"
+        style={{ boxShadow: '0 0 60px -20px rgba(124,58,237,0.25)' }}
+      >
+        <span className="text-3xl">✦</span>
+        <h3 className="mt-3 text-lg font-bold text-foreground">打赏平台</h3>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+          HerGallery 由社区驱动，完全开源。<br />
+          如果这个项目对你有意义，欢迎用 AVAX 支持我们继续建设。
+        </p>
+
+        <div className="mt-6 flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="number"
+              min="0.001"
+              step="0.001"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 pr-16 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/40"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
+              AVAX
+            </span>
+          </div>
+          <button
+            onClick={handleTip}
+            disabled={isTipping || done}
+            className={`shrink-0 rounded-xl px-5 py-2.5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60 ${
+              done
+                ? 'bg-violet-100 text-violet-700'
+                : 'bg-violet-600 text-white hover:bg-violet-500 hover:shadow-lg hover:shadow-violet-500/30'
+            }`}
+          >
+            {done ? '已打赏 ✦' : isTipping ? '处理中…' : '打赏'}
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-muted-foreground/60">
+          链上转账，直接到达合约地址，完全透明可查
+        </p>
+      </motion.div>
+    </section>
+  );
+}
+
 // ── Landing page ──────────────────────────────────────────────────────────────
 
 const LandingPage = () => {
@@ -270,7 +352,7 @@ const LandingPage = () => {
 
         {/* content — pt-16 pushes below the transparent header */}
         <div className="flex min-h-screen flex-col items-center justify-center pt-16">
-        <div className="relative z-10 max-w-3xl text-center">
+        <div className="relative z-10 max-w-3xl w-full px-8 text-center">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -285,7 +367,7 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-4 text-6xl font-bold leading-tight tracking-tight sm:text-7xl"
+            className="text-6xl font-bold leading-tight tracking-tight sm:text-7xl"
             style={{
               background:
                 'linear-gradient(120deg, #ede9fe 10%, #c4b5fd 40%, #f0abfc 75%, #e9d5ff 100%)',
@@ -396,32 +478,109 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* ── How it works (step flow) ───────────────────────────────────── */}
+        {/* ── Journeys & Badges ───────────────────────────────────────────── */}
         <section className="py-16" style={{ background: 'linear-gradient(to bottom, transparent, hsl(var(--secondary)/0.3), transparent)' }}>
           <div className="gallery-container">
             <div className="mb-10 text-center">
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">流程</p>
-              <h2 className="mt-2 text-3xl font-bold text-foreground">三步开始</h2>
+              <p className="text-xs font-semibold uppercase tracking-widest text-primary">旅程</p>
+              <h2 className="mt-2 text-3xl font-bold text-foreground">三种参与方式</h2>
+              <p className="mt-3 text-sm text-muted-foreground">
+                无论你是创作者、策展人还是观众，都能在这里留下不可磨灭的链上印记
+              </p>
             </div>
-            <div className="relative mx-auto grid max-w-3xl grid-cols-1 gap-8 sm:grid-cols-3">
+
+            <div className="grid gap-6 sm:grid-cols-3">
               {[
-                { step: '01', title: '连接钱包', desc: '使用 MetaMask 等 Web3 钱包连接，切换到 Avalanche Fuji 测试网' },
-                { step: '02', title: '创建或投稿', desc: '发起一个展厅，或在感兴趣的展厅中投递你的作品与存证' },
-                { step: '03', title: '推荐与收获徽章', desc: '为喜欢的投稿点推荐，见证重要记录，完成里程碑解锁 POAP' },
-              ].map((s) => (
+                {
+                  icon: '🎪',
+                  title: '策展人',
+                  color: 'violet',
+                  steps: [
+                    { num: '01', title: '创建展厅', desc: '质押 0.001 AVAX，创建一个属于你的展厅空间' },
+                    { num: '02', title: '收录投稿', desc: '审核并收录来自创作者的作品' },
+                    { num: '03', title: '运营展厅', desc: '持续生长，吸引社区托举与见证' },
+                  ],
+                  badges: [],
+                },
+                {
+                  icon: '✏️',
+                  title: '投稿人',
+                  color: 'emerald',
+                  steps: [
+                    { num: '01', title: '提交作品', desc: '上传存证或二创，让创作被永久记住' },
+                    { num: '02', title: '等待审核', desc: '策展人审核后作品将在展厅展示' },
+                    { num: '03', title: '获得认可', desc: '作品被推荐，见证历史记忆' },
+                  ],
+                  badges: [
+                    { icon: '🌸', name: '首投者', desc: '完成第一次投稿' },
+                    { icon: '✦', name: '推荐里程碑', desc: '单条投稿获得10次推荐' },
+                  ],
+                },
+                {
+                  icon: '👁️',
+                  title: '观众',
+                  color: 'amber',
+                  steps: [
+                    { num: '01', title: '推荐', desc: '托举优质内容，让有价值的声音被看见' },
+                    { num: '02', title: '见证', desc: '说出「我知道这件事发生过」' },
+                    { num: '03', title: '打赏', desc: '支持策展人，让展厅持续生长' },
+                  ],
+                  badges: [],
+                },
+              ].map((journey) => (
                 <motion.div
-                  key={s.step}
-                  initial={{ opacity: 0, y: 12 }}
+                  key={journey.title}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5 }}
-                  className="flex flex-col items-center text-center"
+                  className="rounded-2xl border border-border bg-card p-6"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-xl font-bold text-primary">
-                    {s.step}
+                  {/* Journey Header */}
+                  <div className="flex items-center gap-3 pb-4 border-b border-border mb-4">
+                    <span className="text-2xl">{journey.icon}</span>
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">{journey.title}</h3>
+                      <p className="text-xs text-muted-foreground">旅程</p>
+                    </div>
                   </div>
-                  <h3 className="mt-4 text-base font-semibold text-foreground">{s.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
+
+                  {/* Steps */}
+                  <div className="space-y-3">
+                    {journey.steps.map((step) => (
+                      <div key={step.num} className="flex gap-3">
+                        <span className={`text-lg font-bold ${
+                          journey.color === 'violet' ? 'text-violet-400' :
+                          journey.color === 'emerald' ? 'text-emerald-400' : 'text-amber-400'
+                        }`}>
+                          {step.num}
+                        </span>
+                        <div>
+                          <h4 className="text-sm font-medium text-foreground">{step.title}</h4>
+                          <p className="text-xs text-muted-foreground">{step.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Badges */}
+                  {journey.badges.length > 0 && (
+                    <div className="pt-4 mt-4 border-t border-border">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">里程碑徽章</p>
+                      <div className="flex flex-wrap gap-2">
+                        {journey.badges.map((badge) => (
+                          <div
+                            key={badge.name}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-secondary text-xs"
+                            title={badge.desc}
+                          >
+                            <span>{badge.icon}</span>
+                            <span className="font-medium text-foreground">{badge.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -519,6 +678,9 @@ const LandingPage = () => {
             </div>
           </motion.div>
         </section>
+        {/* ── Tip platform ──────────────────────────────────────────────── */}
+        <TipPlatformSection />
+
       </div>
 
       <Footer />
