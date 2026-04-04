@@ -15,7 +15,9 @@ export interface UserSubmissionRecord extends Submission {
 
 export interface UserActivitySummary {
   submissions: UserSubmissionRecord[];
+  myExhibitions: Exhibition[];
   hasFirstSubmissionBadge: boolean;
+  hasFirstExhibitionBadge: boolean;
   milestoneBadges: Array<{
     submissionId: number;
     exhibitionId: number;
@@ -28,6 +30,7 @@ export interface HomeExhibitionRecord extends Exhibition {
   totalRecommends: number;
   totalWitnesses: number;
   hotScore: number;
+  recentSubmissions: Submission[];
 }
 
 export function useExhibitions() {
@@ -55,7 +58,7 @@ export function useSubmissions(exhibitionId: number) {
     abi: CONTRACT_ABI,
     functionName: 'getSubmissions',
     args: [BigInt(exhibitionId)],
-    query: { enabled: exhibitionId >= 0, refetchInterval: 5000 },
+    query: { enabled: exhibitionId >= 0, refetchInterval: 5000, staleTime: 0 },
   });
 }
 
@@ -127,6 +130,16 @@ export function useHasSubmitted(address: string) {
   });
 }
 
+export function useHasCreatedExhibition(address: string) {
+  return useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: 'hasCreatedExhibition',
+    args: [address as `0x${string}`],
+    query: { enabled: !!address },
+  });
+}
+
 // Hook for direct viem transaction
 export function useSetUsername(onSuccess?: () => void) {
   const { address } = useAccount();
@@ -161,7 +174,7 @@ export function useCreateExhibition(onSuccess?: () => void) {
   const { address } = useAccount();
   const { data: walletClient } = useWalletClient();
 
-  const createExhibition = async (args: { title: string; contentHash: string; coverHash: string; tags: string[] }) => {
+  const createExhibition = async (args: { title: string; content: string; coverHash: string; tags: string[] }) => {
     if (!walletClient || !address) {
       throw new Error('Wallet not connected');
     }
@@ -170,7 +183,7 @@ export function useCreateExhibition(onSuccess?: () => void) {
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'createExhibition',
-      args: [args.title, args.contentHash, args.coverHash, args.tags],
+      args: [args.title, args.content, args.coverHash, args.tags],
       value: BigInt('1000000000000000'), // 0.001 AVAX
       account: address,
       chain: avalancheFuji,
@@ -193,7 +206,7 @@ export function useSubmitToExhibition(onSuccess?: () => void) {
   const submitToExhibition = async (args: {
     exhibitionId: number;
     contentType: string;
-    contentHash: string;
+    content: string;
     title: string;
     description: string;
   }) => {
@@ -208,7 +221,7 @@ export function useSubmitToExhibition(onSuccess?: () => void) {
       args: [
         BigInt(args.exhibitionId),
         args.contentType,
-        args.contentHash,
+        args.content,
         args.title,
         args.description,
       ],
@@ -468,13 +481,47 @@ export function useTipExhibition(onSuccess?: () => void) {
   return { tipExhibition };
 }
 
+export function useTipPlatform(onSuccess?: () => void) {
+  const { address } = useAccount();
+  const { data: walletClient } = useWalletClient();
+
+  const tipPlatform = async (amountInAvax: string) => {
+    if (!walletClient || !address) {
+      throw new Error('Wallet not connected');
+    }
+
+    const normalizedAmount = amountInAvax.trim();
+    if (!normalizedAmount || Number(normalizedAmount) <= 0) {
+      throw new Error('打赏金额必须大于 0');
+    }
+
+    const hash = await walletClient.writeContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'tipPlatform',
+      args: [],
+      value: parseEther(normalizedAmount),
+      account: address,
+      chain: avalancheFuji,
+    });
+
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status === 'success') {
+      onSuccess?.();
+    }
+    return hash;
+  };
+
+  return { tipPlatform };
+}
+
 export function parseExhibition(raw: any): Exhibition | null {
   if (!raw) return null;
   return {
     id: Number(raw.id),
     curator: raw.curator,
     title: raw.title,
-    contentHash: raw.contentHash,
+    content: raw.content,
     coverHash: raw.coverHash,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     createdAt: Number(raw.createdAt),
@@ -498,7 +545,7 @@ export function parseSubmission(raw: any): Submission | null {
     creator: raw.creator,
     contentType: raw.contentType,
     status: Number(raw.status),
-    contentHash: raw.contentHash,
+    content: raw.content,
     title: raw.title,
     description: raw.description,
     recommendCount: Number(raw.recommendCount),
@@ -516,7 +563,7 @@ export function parseSubmissions(raw: any): Submission[] {
 export async function fetchUserActivity(address: string): Promise<UserActivitySummary> {
   const normalizedAddress = address.toLowerCase();
 
-  const [rawExhibitions, rawHasSubmitted] = await Promise.all([
+  const [rawExhibitions, rawHasSubmitted, rawHasCreatedExhibition] = await Promise.all([
     publicClient.readContract({
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
@@ -526,6 +573,12 @@ export async function fetchUserActivity(address: string): Promise<UserActivitySu
       address: CONTRACT_ADDRESS,
       abi: CONTRACT_ABI,
       functionName: 'hasSubmitted',
+      args: [address as `0x${string}`],
+    }),
+    publicClient.readContract({
+      address: CONTRACT_ADDRESS,
+      abi: CONTRACT_ABI,
+      functionName: 'hasCreatedExhibition',
       args: [address as `0x${string}`],
     }),
   ]);
@@ -567,9 +620,15 @@ export async function fetchUserActivity(address: string): Promise<UserActivitySu
       recommendCount: submission.recommendCount,
     }));
 
+  const myExhibitions = exhibitions
+    .filter((exhibition) => exhibition.curator.toLowerCase() === normalizedAddress)
+    .sort((a, b) => b.createdAt - a.createdAt);
+
   return {
     submissions,
+    myExhibitions,
     hasFirstSubmissionBadge: Boolean(rawHasSubmitted),
+    hasFirstExhibitionBadge: Boolean(rawHasCreatedExhibition),
     milestoneBadges,
   };
 }
@@ -595,6 +654,7 @@ export async function fetchHomeExhibitions(): Promise<HomeExhibitionRecord[]> {
       const submissions = parseSubmissions(rawSubmissions).filter(
         (submission) => submission.status === 1 && !submission.flagged
       );
+      const recentSubmissions = submissions.slice(0, 3);
       const totalRecommends = submissions.reduce((sum, submission) => sum + submission.recommendCount, 0);
       const totalWitnesses = submissions.reduce((sum, submission) => sum + submission.witnessCount, 0);
 
@@ -603,6 +663,7 @@ export async function fetchHomeExhibitions(): Promise<HomeExhibitionRecord[]> {
         totalRecommends,
         totalWitnesses,
         hotScore: totalRecommends * 0.7 + exhibition.submissionCount * 0.3,
+        recentSubmissions,
       };
     })
   );

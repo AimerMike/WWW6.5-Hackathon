@@ -142,7 +142,7 @@ export function AuthContent() {
       await new Promise((r) => setTimeout(r, 600));
 
       setStep("signing");
-      const signRes = await fetch(`${API_BASE}/api/auth/sign`, {
+      const signRes = await fetch(`${API_BASE}/auth/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userAddress: address }),

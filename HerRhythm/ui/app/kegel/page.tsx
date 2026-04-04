@@ -227,6 +227,8 @@ export default function KegelPage() {
     },
   });
 
+  const checkedInToday = sessionState === "complete" && hasCheckedInToday === true;
+
   useEffect(() => {
     if (sessionState !== "active") return;
 
@@ -687,7 +689,7 @@ export default function KegelPage() {
                   </p>
                 </div>
 
-                {hasCheckedInToday ? (
+                {checkedInToday ? (
                   <button
                     onClick={() => router.push("/checkin")}
                     className="rounded-full border border-white/30 bg-[#eef3eb] px-6 py-2.5 text-sm tracking-[0.03em] text-[#33413a] shadow-[0_10px_22px_rgba(97,122,101,0.08),inset_0_1px_0_rgba(255,255,255,0.3)] transition-all duration-500 hover:-translate-y-0.5 hover:bg-[#e8efe5] hover:shadow-[0_16px_30px_rgba(97,122,101,0.12)]"

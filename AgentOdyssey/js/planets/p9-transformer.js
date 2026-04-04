@@ -12,6 +12,29 @@ PLANETS.push({
     easy: {
       sections: [
         {
+          type: 'concept',
+          title: '💡 关于 P9-P11 的说明',
+          html: `
+            <div style="margin:14px 0;padding:16px;background:rgba(251,191,36,.08);border-left:4px solid var(--yellow);border-radius:10px">
+              <strong style="color:var(--yellow);font-size:1.1rem">💡 可选内容提示</strong><br><br>
+
+              <p style="line-height:1.8;margin:12px 0">
+                P9-P11 是深入 LLM 底层原理的<strong>可选内容</strong>：<br>
+                • P9：Transformer 架构<br>
+                • P10：预训练流程<br>
+                • P11：后训练（RLHF）<br><br>
+
+                <strong>如果你的目标是：</strong><br>
+                ✅ 快速学会 Agent 开发 → <strong>可以跳过 P9-P11，直接去 P12 实战星</strong><br>
+                ✅ 深入理解 LLM 原理 → 继续学习 P9-P11<br>
+                ✅ 成为 AI 研究者 → 强烈推荐学习地狱模式<br><br>
+
+                <strong>跳过不影响后续学习！</strong>P12 之后的内容不依赖 P9-P11 的知识。
+              </p>
+            </div>
+          `
+        },
+        {
           type: 'story',
           html: `
             <div class="speaker">🚀 发现隐藏星球！</div>

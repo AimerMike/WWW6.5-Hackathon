@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useState, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Star, Users, Building2, ArrowUpRight, ChevronDown } from "lucide-react";
@@ -18,7 +18,8 @@ import type { CompanyRankItem } from "@/data/company-ranking-mock";
 
 const PAGE_SIZE = 9;
 
-export default function CompanyRankingPage() {
+// 内部组件使用 useSearchParams
+function CompanyRankingContent() {
   const searchParams = useSearchParams();
   const initialSort = searchParams.get("sort") || "score";
   const initialIndustry = searchParams.get("industry") || "全部";
@@ -270,5 +271,40 @@ function CompanyCard({ company }: { company: CompanyRankItem }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+// 加载骨架屏
+function CompanyRankingSkeleton() {
+  return (
+    <div className="min-h-screen bg-background">
+      <div className="border-b border-border/80 bg-background/80">
+        <div className="mx-auto max-w-6xl px-4 py-3">
+          <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+        </div>
+      </div>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="h-10 w-40 animate-pulse rounded bg-muted" />
+      </div>
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="h-16 animate-pulse rounded-lg bg-muted" />
+      </div>
+      <div className="mx-auto max-w-6xl px-4 py-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="h-48 animate-pulse rounded-lg bg-muted" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 默认导出，用 Suspense 包裹
+export default function CompanyRankingPage() {
+  return (
+    <Suspense fallback={<CompanyRankingSkeleton />}>
+      <CompanyRankingContent />
+    </Suspense>
   );
 }

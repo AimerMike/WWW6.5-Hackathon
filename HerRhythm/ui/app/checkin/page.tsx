@@ -339,12 +339,6 @@ export default function CheckInPage() {
               </div>
             </div>
 
-            {mounted &&isConnected && todayStatus !== "done" && (
-              <div className="mt-4 flex justify-center">
-                <CheckInAction onSuccess={() => window.location.reload()} />
-              </div>
-            )}
-
             <div className="mt-4 flex flex-wrap justify-center gap-3">
               <Link
                 href="/breathing"

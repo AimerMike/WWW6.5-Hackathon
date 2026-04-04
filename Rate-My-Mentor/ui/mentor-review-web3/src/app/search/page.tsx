@@ -872,8 +872,18 @@ function SearchContent() {
     return list;
   }, [query, industry]);
 
+  // 获取本地保存的评价（用户新发布的）
+  const localReviews = useMemo(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("rmm_reviews") || "[]");
+    } catch {
+      return [];
+    }
+  }, []);
+
   const reviews = useMemo(() => {
-    let list = MOCK_SEARCH_REVIEWS;
+    let list = [...localReviews, ...MOCK_SEARCH_REVIEWS];
     if (query) {
       const q = query.toLowerCase();
       list = list.filter(
@@ -885,7 +895,7 @@ function SearchContent() {
       );
     }
     return list;
-  }, [query]);
+  }, [query, localReviews]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

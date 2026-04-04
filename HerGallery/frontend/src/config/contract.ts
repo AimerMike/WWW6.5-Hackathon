@@ -1,4 +1,4 @@
-export const CONTRACT_ADDRESS = '0xB76Bf0228C2eFBED7c6D2b7C28fFe202Db5C37e8' as const;
+export const CONTRACT_ADDRESS = '0xb8e2a851B52Ab5887E4e9677C6fe2A3ACa2Dc0BF' as const;
 
 export const AVALANCHE_FUJI = {
   id: 43113,
@@ -17,7 +17,7 @@ const exhibitionComponents = [
   { name: 'id', type: 'uint256' },
   { name: 'curator', type: 'address' },
   { name: 'title', type: 'string' },
-  { name: 'contentHash', type: 'string' },
+  { name: 'content', type: 'string' },
   { name: 'coverHash', type: 'string' },
   { name: 'tags', type: 'string[]' },
   { name: 'createdAt', type: 'uint256' },
@@ -33,7 +33,7 @@ const submissionComponents = [
   { name: 'creator', type: 'address' },
   { name: 'contentType', type: 'string' },
   { name: 'status', type: 'uint8' },
-  { name: 'contentHash', type: 'string' },
+  { name: 'content', type: 'string' },
   { name: 'title', type: 'string' },
   { name: 'description', type: 'string' },
   { name: 'createdAt', type: 'uint256' },
@@ -138,9 +138,16 @@ export const CONTRACT_ABI = [
     type: 'function',
   },
   {
+    inputs: [{ name: 'user', type: 'address' }],
+    name: 'hasCreatedExhibition',
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
     inputs: [
       { name: 'title', type: 'string' },
-      { name: 'contentHash', type: 'string' },
+      { name: 'content', type: 'string' },
       { name: 'coverHash', type: 'string' },
       { name: 'tags', type: 'string[]' },
     ],
@@ -153,7 +160,7 @@ export const CONTRACT_ABI = [
     inputs: [
       { name: 'exhibitionId', type: 'uint256' },
       { name: 'contentType', type: 'string' },
-      { name: 'contentHash', type: 'string' },
+      { name: 'content', type: 'string' },
       { name: 'title', type: 'string' },
       { name: 'description', type: 'string' },
     ],
@@ -274,7 +281,7 @@ export interface Exhibition {
   id: number;
   curator: string;
   title: string;
-  contentHash: string;
+  content: string;
   coverHash: string;
   tags: string[];
   createdAt: number;
@@ -290,7 +297,7 @@ export interface Submission {
   creator: string;
   contentType: string;
   status: number;
-  contentHash: string;
+  content: string;
   title: string;
   description: string;
   createdAt: number;
